@@ -43,10 +43,15 @@ export async function POST(request: Request) {
       const ext = originalName.substring(originalName.lastIndexOf('.'));
       const filename = `surat-masuk-${crypto.randomUUID()}${ext}`;
 
-      const uploadDir = join(process.cwd(), 'public', 'uploads');
-      await mkdir(uploadDir, { recursive: true });
-      await writeFile(join(uploadDir, filename), buffer);
-      lampiranUrl = `/uploads/${filename}`;
+      try {
+        const uploadDir = join(process.cwd(), 'public', 'uploads');
+        await mkdir(uploadDir, { recursive: true });
+        await writeFile(join(uploadDir, filename), buffer);
+        lampiranUrl = `/uploads/${filename}`;
+      } catch (uploadError) {
+        console.warn('Gagal menyimpan file secara fisik (kemungkinan karena serverless/read-only filesystem Netlify):', uploadError);
+        // Kita biarkan lampiranUrl tetap null, agar proses pengiriman data teks tetap berhasil.
+      }
     }
 
     const id = `SRT-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
