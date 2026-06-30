@@ -1,0 +1,176 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id       String  @id @default(uuid())
+  nim      String  @unique
+  name     String
+  email    String  @unique
+  password String
+  role     String
+  komisi   String?
+  jabatan  String?
+  avatar   String?
+  phone    String?
+  angkatan String?
+  prodi    String?
+}
+
+model Sidang {
+  id              String   @id
+  judul           String
+  jenis           String
+  status          String
+  tanggal         String
+  waktu_mulai     String
+  waktu_selesai   String?
+  lokasi          String
+  link_daring     String?
+  komisi          String?
+  agenda          String   // Stringified JSON array
+  peserta         String   // Stringified JSON array
+  notulensi       String?
+  quorum_required Int
+  quorum_achieved Int
+  created_by      String
+  created_at      String
+
+  @@index([status])
+  @@index([tanggal])
+}
+
+model Legislasi {
+  id               String   @id
+  nomor            String?
+  judul            String
+  jenis            String
+  status           String
+  komisi           String
+  pengaju          String
+  tanggal_diajukan String
+  tanggal_disahkan String?
+  isi_ringkasan    String
+  konten           String?
+  tags             String   // Stringified JSON array
+  revisi_ke        Int
+  approved_by      String?
+  sidang_id        String?
+
+  @@index([status])
+}
+
+model Aspirasi {
+  id                    String             @id
+  kode_tracking         String             @unique
+  judul                 String
+  deskripsi             String
+  kategori              String
+  status                String
+  is_anonim             Boolean
+  nama_pengaju          String?
+  nim_pengaju           String?
+  email_pengaju         String?
+  tanggal_masuk         String
+  tanggal_update        String
+  catatan_tindak_lanjut String?
+  petugas               String?
+  lampiran              String? // Stringified JSON array
+  timeline              AspirasiTimeline[]
+
+  @@index([status])
+  @@index([tanggal_masuk])
+}
+
+model AspirasiTimeline {
+  id          String   @id @default(uuid())
+  aspirasi_id String
+  status      String
+  keterangan  String
+  tanggal     String
+  petugas     String?
+  aspirasi    Aspirasi @relation(fields: [aspirasi_id], references: [id], onDelete: Cascade)
+}
+
+model ProgramKerjaBEM {
+  id                  String  @id
+  nama                String
+  divisi              String
+  deskripsi           String
+  target              String
+  tanggal_mulai       String
+  tanggal_selesai     String
+  status              String
+  progress_percentage Int
+  bukti_urls          String? // Stringified JSON array
+  skor_evaluasi       Int?
+  catatan_dpm         String?
+  catatan_bem         String?
+  penanggung_jawab    String
+}
+
+model Voting {
+  id                 String  @id
+  judul              String
+  deskripsi          String
+  status             String
+  sidang_id          String?
+  tanggal_mulai      String?
+  tanggal_selesai    String?
+  quorum_required    Int
+  total_pemilih      Int
+  jenis              String
+  opsi_multipilih    String? // Stringified JSON array
+  hasil_setuju       Int
+  hasil_tidak_setuju Int
+  hasil_abstain      Int
+  hasil_total        Int
+  created_by         String
+
+  @@index([status])
+}
+
+model Surat {
+  id                String  @id
+  nomor             String
+  perihal           String
+  jenis             String
+  status            String
+  dari              String
+  kepada            String
+  tanggal           String
+  isi_singkat       String
+  lampiran          String? // Stringified JSON array
+  disposisi_kepada  String?
+  disposisi_catatan String?
+  created_by        String
+
+  @@index([status])
+  @@index([tanggal])
+}
+
+model Notifikasi {
+  id      String  @id @default(uuid())
+  judul   String
+  pesan   String
+  jenis   String
+  is_read Boolean
+  tanggal String
+  link    String?
+}
+
+model AuditLog {
+  id         String @id @default(uuid())
+  user       String
+  aksi       String
+  modul      String
+  detail     String
+  ip_address String
+  tanggal    String
+}
