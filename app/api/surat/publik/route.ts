@@ -34,24 +34,19 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Ukuran file melebihi batas 10MB.' }, { status: 413 });
       }
 
-      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      const allowedTypes = [
+        'image/jpeg', 'image/png', 'application/pdf',
+        'application/msword', // .doc
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
+      ];
       if (!allowedTypes.includes(file.type)) {
-        return NextResponse.json({ error: 'Jenis file tidak diizinkan. Hanya PDF, JPG, PNG.' }, { status: 400 });
+        return NextResponse.json({ error: 'Jenis file tidak diizinkan. Hanya PDF, JPG, PNG, dan Word.' }, { status: 400 });
       }
 
       const originalName = (file as any).name || `surat-masuk-${Date.now()}`;
-      const ext = originalName.substring(originalName.lastIndexOf('.'));
-      const filename = `surat-masuk-${crypto.randomUUID()}${ext}`;
-
-      try {
-        const uploadDir = join(process.cwd(), 'public', 'uploads');
-        await mkdir(uploadDir, { recursive: true });
-        await writeFile(join(uploadDir, filename), buffer);
-        lampiranUrl = `/uploads/${filename}`;
-      } catch (uploadError) {
-        console.warn('Gagal menyimpan file secara fisik (kemungkinan karena serverless/read-only filesystem Netlify):', uploadError);
-        // Kita biarkan lampiranUrl tetap null, agar proses pengiriman data teks tetap berhasil.
-      }
+      // Simpan sebagai Base64 (Data URI) langsung ke Database agar berfungsi di Netlify Serverless
+      const base64Data = buffer.toString('base64');
+      lampiranUrl = `data:${file.type};base64,${base64Data}`;
     }
 
     const id = `SRT-${crypto.randomUUID().split('-')[0].toUpperCase()}`;

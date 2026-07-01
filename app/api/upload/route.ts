@@ -30,26 +30,24 @@ export async function POST(request: Request) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+      'application/pdf', 
+      'application/msword', // .doc
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+      'application/vnd.ms-excel', // .xls
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // .xlsx
+    ];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Invalid file type. Only images and PDFs are allowed.' }, { status: 400 });
+      return NextResponse.json({ error: 'Jenis file tidak diizinkan. Hanya menerima Gambar, PDF, Word, dan Excel.' }, { status: 400 });
     }
 
     const originalName = (file as any).name || `upload-${Date.now()}`;
-    const ext = originalName.substring(originalName.lastIndexOf('.'));
-    // Prevent path traversal
-    const filename = `${crypto.randomUUID()}${ext}`;
+    const filename = originalName; // Kita pakai nama asli saja
     
-    // Create uploads directory if it doesn't exist
-    const uploadDir = join(process.cwd(), 'public', 'uploads');
-    try {
-      await mkdir(uploadDir, { recursive: true });
-    } catch (e) {
-      // Ignore if it already exists
-    }
-
-    const filePath = join(uploadDir, filename);
-    await writeFile(filePath, buffer);
+    // Convert directly to Base64 (Data URI) to support serverless/Netlify environments
+    const base64Data = buffer.toString('base64');
+    const dataUri = `data:${file.type};base64,${base64Data}`;
 
     // Record to AuditLog
     await prisma.auditLog.create({
