@@ -34,11 +34,12 @@ export async function createInAppNotification({
     // Automatically broadcast to WA Group if configured
     const groupId = process.env.WA_GROUP_ID;
     if (groupId) {
-      // Background async call so it doesn't block the API response
       const waMessage = `*INFO DPM ITB RIAU*\n\n*${judul}*\n${pesan}`;
-      sendWhatsAppMessage(groupId, waMessage).catch((e) => {
+      try {
+        await sendWhatsAppMessage(groupId, waMessage);
+      } catch (e) {
         console.error('Failed to auto-forward notification to WA Group:', e);
-      });
+      }
     }
 
     return true;
