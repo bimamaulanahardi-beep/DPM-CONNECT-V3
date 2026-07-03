@@ -30,6 +30,17 @@ export async function createInAppNotification({
         link,
       },
     });
+
+    // Automatically broadcast to WA Group if configured
+    const groupId = process.env.WA_GROUP_ID;
+    if (groupId) {
+      // Background async call so it doesn't block the API response
+      const waMessage = `*INFO DPM ITB RIAU*\n\n*${judul}*\n${pesan}`;
+      sendWhatsAppMessage(groupId, waMessage).catch((e) => {
+        console.error('Failed to auto-forward notification to WA Group:', e);
+      });
+    }
+
     return true;
   } catch (error) {
     console.error('Failed to create in-app notification:', error);
@@ -63,6 +74,11 @@ export async function sendWhatsAppMessage(phone: string, message: string) {
   let cleanPhone = phone.replace(/\D/g, '');
   if (cleanPhone.startsWith('0')) {
     cleanPhone = '62' + cleanPhone.substring(1);
+  }
+  
+  // If the target has '@g.us', it's a WhatsApp Group ID, we shouldn't sanitize it into a strict phone number
+  if (phone.includes('@g.us')) {
+    cleanPhone = phone; // keep the original group ID
   }
 
   try {
