@@ -248,7 +248,7 @@ export default function TransparansiPage() {
                       </div>
 
                       <h3 className="font-bold text-white mb-2 line-clamp-2 hover:text-amber-500 transition-colors">
-                        <Link href={`/dashboard/legislasi/${item.id}`}>
+                        <Link href={`/transparansi/legislasi/${item.id}`}>
                           {item.judul}
                         </Link>
                       </h3>
@@ -270,7 +270,7 @@ export default function TransparansiPage() {
                       <div className="flex items-center justify-between text-xs text-slate-500">
                         <span>Diajukan: {formatDate(item.tanggal_diajukan)}</span>
                         <Link 
-                          href={`/dashboard/legislasi/${item.id}`}
+                          href={`/transparansi/legislasi/${item.id}`}
                           className="text-amber-500 hover:text-amber-400 font-bold inline-flex items-center gap-1.5 transition-colors"
                         >
                           Lihat Detail <ChevronRight className="w-3.5 h-3.5" />
