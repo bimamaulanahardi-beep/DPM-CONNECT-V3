@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 export default function PengawasanListPage() {
@@ -25,6 +26,7 @@ export default function PengawasanListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('semua');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', nama: '' });
   
   const { data: session } = useSession();
   const { toast } = useToast();
@@ -51,14 +53,19 @@ export default function PengawasanListPage() {
     fetchProker();
   }, []);
 
-  const handleDelete = async (id: string, nama: string) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus program kerja "${nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  const handleDelete = (id: string, nama: string) => {
+    setDeleteModal({ isOpen: true, id, nama });
+  };
+
+  const executeDelete = async () => {
+    const { id, nama } = deleteModal;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/pengawasan/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setProkerList(prev => prev.filter(p => p.id !== id));
         toast({ title: 'Program Dihapus', description: `"${nama}" berhasil dihapus.` });
+        setDeleteModal({ isOpen: false, id: '', nama: '' });
       } else {
         const data = await res.json();
         toast({ title: 'Gagal Menghapus', description: data.error || 'Terjadi kesalahan.', variant: 'destructive' });
@@ -218,6 +225,15 @@ export default function PengawasanListPage() {
           <p className="text-xs text-slate-500">Tidak ada program kerja BEM yang cocok dengan kriteria filter Anda.</p>
         </div>
       )}
+
+      <ConfirmDialog 
+        isOpen={deleteModal.isOpen} 
+        onClose={() => setDeleteModal({ isOpen: false, id: '', nama: '' })}
+        onConfirm={executeDelete}
+        title="Hapus Program Kerja?"
+        description={`Apakah Anda yakin ingin menghapus program kerja "${deleteModal.nama}"? Tindakan ini tidak dapat dibatalkan.`}
+        isLoading={deletingId === deleteModal.id}
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { LegislasiStatus } from '@/lib/types';
@@ -152,6 +153,7 @@ export default function LegislasiDetailPage({ params }: PageProps) {
   const [revisionsCount, setRevisionsCount] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [previewModal, setPreviewModal] = useState<{ fileId: string | null; filename: string; url: string } | null>(null);
+  const [deleteModal, setDeleteModal] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -317,14 +319,17 @@ export default function LegislasiDetailPage({ params }: PageProps) {
     }
   };
 
-  const handleDeleteLegislasi = async () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus regulasi/RUU ini? Tindakan ini tidak dapat dibatalkan.')) return;
-    
+  const handleDeleteLegislasi = () => {
+    setDeleteModal(true);
+  };
+  
+  const executeDelete = async () => {
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/legislasi/${params.id}`, { method: 'DELETE' });
       if (res.ok) {
         toast({ title: 'Legislasi Dihapus', description: 'Regulasi/RUU telah berhasil dihapus dari sistem.' });
+        setDeleteModal(false);
         router.push('/dashboard/legislasi');
       } else {
         const data = await res.json();
@@ -700,6 +705,15 @@ export default function LegislasiDetailPage({ params }: PageProps) {
         </div>
 
       </div>
+
+      <ConfirmDialog 
+        isOpen={deleteModal} 
+        onClose={() => setDeleteModal(false)}
+        onConfirm={executeDelete}
+        title="Hapus Legislasi?"
+        description="Apakah Anda yakin ingin menghapus regulasi/RUU ini? Tindakan ini tidak dapat dibatalkan."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

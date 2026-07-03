@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,6 +29,7 @@ export default function AspirasiListPage() {
   const [statusFilter, setStatusFilter] = useState('semua');
   const [kategoriFilter, setKategoriFilter] = useState('semua');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', judul: '' });
 
   const user = session?.user as any;
   const isMahasiswa = user?.role === 'mahasiswa';
@@ -52,14 +54,19 @@ export default function AspirasiListPage() {
     fetchAspirasi();
   }, []);
 
-  const handleDelete = async (id: string, judul: string) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus aspirasi "${judul}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  const handleDelete = (id: string, judul: string) => {
+    setDeleteModal({ isOpen: true, id, judul });
+  };
+
+  const executeDelete = async () => {
+    const { id, judul } = deleteModal;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/aspirasi/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setAspirasiList(prev => prev.filter(a => a.id !== id));
         toast({ title: 'Aspirasi Dihapus', description: `"${judul}" berhasil dihapus.` });
+        setDeleteModal({ isOpen: false, id: '', judul: '' });
       } else {
         const data = await res.json();
         toast({ title: 'Gagal Menghapus', description: data.error || 'Terjadi kesalahan.', variant: 'destructive' });
@@ -220,6 +227,15 @@ export default function AspirasiListPage() {
           <p className="text-xs text-slate-500">Tidak ada aspirasi mahasiswa yang cocok dengan kriteria filter Anda.</p>
         </div>
       )}
+
+      <ConfirmDialog 
+        isOpen={deleteModal.isOpen} 
+        onClose={() => setDeleteModal({ isOpen: false, id: '', judul: '' })}
+        onConfirm={executeDelete}
+        title="Hapus Aspirasi?"
+        description={`Apakah Anda yakin ingin menghapus aspirasi "${deleteModal.judul}"? Tindakan ini tidak dapat dibatalkan.`}
+        isLoading={deletingId === deleteModal.id}
+      />
     </div>
   );
 }

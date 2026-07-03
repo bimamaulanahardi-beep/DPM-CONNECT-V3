@@ -26,6 +26,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -47,6 +48,7 @@ export default function SidangDetailPage({ params }: PageProps) {
   const [isSavingAttendance, setIsSavingAttendance] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteModal, setDeleteModal] = useState(false);
 
   // Document attachments list state
   const [documents, setDocuments] = useState<any[]>([
@@ -252,9 +254,11 @@ export default function SidangDetailPage({ params }: PageProps) {
     }
   };
 
-  const handleDeleteSidang = async () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus sidang ini? Tindakan ini tidak dapat dibatalkan.')) return;
-    
+  const handleDeleteSidang = () => {
+    setDeleteModal(true);
+  };
+  
+  const executeDelete = async () => {
     setIsDeleting(true);
     try {
       const res = await fetch(`/api/sidang/${params.id}`, {
@@ -266,6 +270,7 @@ export default function SidangDetailPage({ params }: PageProps) {
           title: 'Sidang Dihapus',
           description: 'Sidang telah berhasil dihapus dari sistem.',
         });
+        setDeleteModal(false);
         router.push('/dashboard/sidang');
       } else {
         const data = await res.json();
@@ -579,6 +584,15 @@ export default function SidangDetailPage({ params }: PageProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ConfirmDialog 
+        isOpen={deleteModal} 
+        onClose={() => setDeleteModal(false)}
+        onConfirm={executeDelete}
+        title="Hapus Sidang?"
+        description="Apakah Anda yakin ingin menghapus sidang ini? Tindakan ini tidak dapat dibatalkan."
+        isLoading={isDeleting}
+      />
     </div>
   );
 }

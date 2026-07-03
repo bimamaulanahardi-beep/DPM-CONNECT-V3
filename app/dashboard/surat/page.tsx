@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,6 +31,7 @@ export default function SuratListPage() {
   const [suratList, setSuratList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', perihal: '' });
   const [copied, setCopied] = useState(false);
 
   const { data: session } = useSession();
@@ -56,14 +58,19 @@ export default function SuratListPage() {
     fetchSurat();
   }, []);
 
-  const handleDelete = async (id: string, perihal: string) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus surat "${perihal}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  const handleDelete = (id: string, perihal: string) => {
+    setDeleteModal({ isOpen: true, id, perihal });
+  };
+
+  const executeDelete = async () => {
+    const { id, perihal } = deleteModal;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/surat/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setSuratList(prev => prev.filter(s => s.id !== id));
         toast({ title: 'Surat Dihapus', description: `"${perihal}" berhasil dihapus.` });
+        setDeleteModal({ isOpen: false, id: '', perihal: '' });
       } else {
         const data = await res.json();
         toast({ title: 'Gagal Menghapus', description: data.error || 'Terjadi kesalahan.', variant: 'destructive' });
@@ -254,6 +261,15 @@ export default function SuratListPage() {
           <p className="text-xs text-slate-500 font-sans">Tidak ada arsip dokumen korespondensi surat yang cocok dengan filter pencarian Anda.</p>
         </div>
       )}
+
+      <ConfirmDialog 
+        isOpen={deleteModal.isOpen} 
+        onClose={() => setDeleteModal({ isOpen: false, id: '', perihal: '' })}
+        onConfirm={executeDelete}
+        title="Hapus Surat?"
+        description={`Apakah Anda yakin ingin menghapus surat "${deleteModal.perihal}"? Tindakan ini tidak dapat dibatalkan.`}
+        isLoading={deletingId === deleteModal.id}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
 
 export default function VotingListPage() {
@@ -21,6 +22,7 @@ export default function VotingListPage() {
   const [sidangs, setSidangs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: '', judul: '' });
   const { data: session } = useSession();
   const { toast } = useToast();
   const userRole = (session?.user as any)?.role;
@@ -48,14 +50,19 @@ export default function VotingListPage() {
     fetchData();
   }, []);
 
-  const handleDelete = async (id: string, judul: string) => {
-    if (!window.confirm(`Apakah Anda yakin ingin menghapus voting "${judul}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  const handleDelete = (id: string, judul: string) => {
+    setDeleteModal({ isOpen: true, id, judul });
+  };
+
+  const executeDelete = async () => {
+    const { id, judul } = deleteModal;
     setDeletingId(id);
     try {
       const res = await fetch(`/api/voting/${id}`, { method: 'DELETE' });
       if (res.ok) {
         setVotingList(prev => prev.filter(v => v.id !== id));
         toast({ title: 'Voting Dihapus', description: `"${judul}" berhasil dihapus.` });
+        setDeleteModal({ isOpen: false, id: '', judul: '' });
       } else {
         const data = await res.json();
         toast({ title: 'Gagal Menghapus', description: data.error || 'Terjadi kesalahan.', variant: 'destructive' });
@@ -181,6 +188,15 @@ export default function VotingListPage() {
           <p className="text-xs text-slate-500">Belum ada sesi voting dewan yang terjadwal.</p>
         </div>
       )}
+
+      <ConfirmDialog 
+        isOpen={deleteModal.isOpen} 
+        onClose={() => setDeleteModal({ isOpen: false, id: '', judul: '' })}
+        onConfirm={executeDelete}
+        title="Hapus Voting?"
+        description={`Apakah Anda yakin ingin menghapus voting "${deleteModal.judul}"? Tindakan ini tidak dapat dibatalkan.`}
+        isLoading={deletingId === deleteModal.id}
+      />
     </div>
   );
 }
