@@ -150,13 +150,16 @@ export default function BaruLegislasiPage() {
                   id="jenis"
                   value={jenis}
                   onChange={(e) => setJenis(e.target.value as LegislasiJenis)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-500 capitalize"
+                  className="w-full h-10 rounded-lg bg-slate-950/60 border border-slate-800 px-3 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  required
                 >
-                  <option value="peraturan">Peraturan Mahasiswa</option>
-                  <option value="ketetapan">Ketetapan DPM</option>
-                  <option value="keputusan">Surat Keputusan</option>
+                  <option value="" disabled>Pilih Kategori Draft</option>
+                  <option value="ad_art">AD/ART</option>
                   <option value="gbhk">GBHK</option>
                   <option value="tata_tertib">Tata Tertib</option>
+                  <option value="peraturan">Peraturan/Undang-Undang</option>
+                  <option value="ketetapan">Ketetapan (TAP DPM)</option>
+                  <option value="keputusan">Keputusan DPM</option>
                 </select>
               </div>
 

@@ -77,7 +77,7 @@ export default function TransparansiPage() {
   });
 
   // Types list for filters
-  const legislasiTypes = ['semua', 'gbhk', 'tata_tertib', 'peraturan', 'ketetapan', 'keputusan'];
+  const legislasiTypes = ['semua', 'ad_art', 'gbhk', 'tata_tertib', 'peraturan', 'ketetapan', 'keputusan'];
   const legislasiStatuses = ['semua', 'diajukan', 'dibahas', 'direvisi', 'disahkan', 'diundangkan', 'ditolak'];
   
   const sidangTypes = ['semua', 'paripurna', 'komisi', 'dengar_pendapat', 'istimewa'];

@@ -10,7 +10,7 @@ export type LegislasiStatus =
   | 'disahkan'
   | 'diundangkan'
   | 'ditolak';
-export type LegislasiJenis = 'ketetapan' | 'peraturan' | 'keputusan' | 'gbhk' | 'tata_tertib';
+export type LegislasiJenis = 'ketetapan' | 'peraturan' | 'keputusan' | 'gbhk' | 'tata_tertib' | 'ad_art';
 
 export type AspirasiStatus =
   | 'diterima'

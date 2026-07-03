@@ -54,7 +54,7 @@ export default function LegislasiListPage() {
     return matchesSearch && matchesStatus && matchesJenis;
   });
 
-  const jenisList = ['semua', 'gbhk', 'tata_tertib', 'peraturan', 'ketetapan', 'keputusan'];
+  const jenisList = ['semua', 'ad_art', 'gbhk', 'tata_tertib', 'peraturan', 'ketetapan', 'keputusan'];
   const statusList = ['semua', 'diajukan', 'dibahas', 'direvisi', 'disahkan', 'diundangkan', 'ditolak'];
 
   return (
