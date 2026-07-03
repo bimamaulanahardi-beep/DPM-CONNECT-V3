@@ -47,27 +47,34 @@ export async function GET(request: Request) {
       }
 
       if (reminderType) {
-        // Find participants
-        const pesertaIds: string[] = JSON.parse(sidang.peserta || '[]');
-        if (pesertaIds.length === 0) continue;
-
-        const users = await prisma.user.findMany({
-          where: {
-            id: { in: pesertaIds },
-            phone: { not: null },
-          }
-        });
-
         const timeStr = `${sidang.tanggal} pukul ${sidang.waktu_mulai}`;
+        const message = reminderType === 'H-1'
+          ? `*REMINDER SIDANG H-1*\n\nMengingatkan bahwa besok akan ada Sidang "${sidang.judul}" pada ${timeStr} bertempat di ${sidang.lokasi}.\n\nMohon kehadiran seluruh peserta tepat waktu.`
+          : `*REMINDER SIDANG H-30 MENIT*\n\nSidang "${sidang.judul}" akan segera dimulai dalam 30 menit (${timeStr}) di ${sidang.lokasi}.\n\nHarap segera bersiap.`;
 
-        for (const user of users) {
-          if (user.phone) {
-            const message = reminderType === 'H-1'
-              ? `*REMINDER SIDANG H-1*\n\nHalo ${user.name},\nMengingatkan bahwa besok akan ada Sidang "${sidang.judul}" pada ${timeStr} bertempat di ${sidang.lokasi}.\n\nMohon kehadirannya tepat waktu.`
-              : `*REMINDER SIDANG H-30 MENIT*\n\nHalo ${user.name},\nSidang "${sidang.judul}" akan segera dimulai dalam 30 menit (${timeStr}) di ${sidang.lokasi}.\n\nHarap segera bersiap.`;
-            
-            await sendWhatsAppMessage(user.phone, message);
-            remindersSent++;
+        const groupId = process.env.WA_GROUP_ID;
+
+        if (groupId) {
+          // Send 1 message to the WhatsApp Group
+          await sendWhatsAppMessage(groupId, message);
+          remindersSent++;
+        } else {
+          // Fallback: Send to individual participants (Japri) if no WA_GROUP_ID is set
+          const pesertaIds: string[] = JSON.parse(sidang.peserta || '[]');
+          if (pesertaIds.length === 0) continue;
+
+          const users = await prisma.user.findMany({
+            where: {
+              id: { in: pesertaIds },
+              phone: { not: null },
+            }
+          });
+
+          for (const user of users) {
+            if (user.phone) {
+              await sendWhatsAppMessage(user.phone, `Halo ${user.name},\n\n${message}`);
+              remindersSent++;
+            }
           }
         }
       }
