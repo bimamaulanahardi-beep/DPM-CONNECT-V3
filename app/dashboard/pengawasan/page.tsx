@@ -11,7 +11,8 @@ import {
   ChevronRight,
   Loader2,
   Plus,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -95,14 +96,25 @@ export default function PengawasanListPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide">Pengawasan Program Kerja BEM</h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">Pantau dan evaluasi pelaksanaan program kerja Badan Eksekutif Mahasiswa (BEM) ITB Riau.</p>
         </div>
-        {isAuthorizedToAdd && (
-          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0">
-            <Link href="/dashboard/pengawasan/baru" className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Tambah Program
-            </Link>
+        <div className="flex gap-2">
+          <Button 
+            onClick={fetchProker} 
+            variant="outline" 
+            className="border-slate-800 bg-slate-900/40 text-slate-350 hover:bg-slate-900 h-10"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Segarkan
           </Button>
-        )}
+          {isAuthorizedToAdd && (
+            <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0 h-10">
+              <Link href="/dashboard/pengawasan/baru" className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Tambah Program
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search & Filters */}

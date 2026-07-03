@@ -15,7 +15,8 @@ import {
   Trash2,
   ExternalLink,
   Copy,
-  CheckCheck
+  CheckCheck,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,11 +108,22 @@ export default function SuratListPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide">Persuratan & Arsip Dokumen</h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">Daftar arsip korespondensi surat masuk dan surat keluar resmi DPM.</p>
         </div>
-        <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0">
-          <Link href="/dashboard/surat/baru">
-            <Plus className="w-4 h-4 mr-1.5" /> Buat Surat Keluar
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={fetchSurat} 
+            variant="outline" 
+            className="border-slate-800 bg-slate-900/40 text-slate-350 hover:bg-slate-900 h-10"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Segarkan
+          </Button>
+          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0">
+            <Link href="/dashboard/surat/baru" className="flex items-center">
+              <Plus className="w-4 h-4 mr-1.5" /> Buat Surat Keluar
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Portal Publik Banner */}

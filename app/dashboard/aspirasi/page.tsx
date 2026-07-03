@@ -10,7 +10,8 @@ import {
   MessageSquareText,
   PlusCircle,
   Loader2,
-  Trash2
+  Trash2,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -107,13 +108,24 @@ export default function AspirasiListPage() {
               : 'Daftar keluhan, usulan, dan aspirasi yang dikirimkan oleh mahasiswa ITB Riau.'}
           </p>
         </div>
-        {isMahasiswa && (
-          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0">
-            <Link href="/dashboard/aspirasi/baru">
-              <PlusCircle className="w-4 h-4 mr-1.5" /> Kirim Aspirasi Baru
-            </Link>
+        <div className="flex gap-2">
+          <Button 
+            onClick={fetchAspirasi} 
+            variant="outline" 
+            className="border-slate-800 bg-slate-900/40 text-slate-350 hover:bg-slate-900 h-10"
+            disabled={loading}
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Segarkan
           </Button>
-        )}
+          {isMahasiswa && (
+            <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0 h-10">
+              <Link href="/dashboard/aspirasi/baru" className="flex items-center">
+                <PlusCircle className="w-4 h-4 mr-1.5" /> Kirim Aspirasi Baru
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Search & Filters */}
