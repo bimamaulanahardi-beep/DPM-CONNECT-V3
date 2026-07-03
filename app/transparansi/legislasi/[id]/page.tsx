@@ -33,20 +33,21 @@ interface PageProps {
 }
 
 // Helper: parse file URL to extract fileId and filename
-function parseFileUrl(url: string): { fileId: string | null; filename: string } {
-  if (!url) return { fileId: null, filename: 'Dokumen' };
+function parseFileUrl(url: string): { fileId: string | null; filename: string; originalUrl: string } {
+  if (!url) return { fileId: null, filename: 'Dokumen', originalUrl: '' };
   const apiMatch = url.match(/\/api\/file\/([^?]+)\?name=(.+)/);
   if (apiMatch) {
     return {
       fileId: apiMatch[1],
       filename: decodeURIComponent(apiMatch[2]),
+      originalUrl: url
     };
   }
   const uploadsMatch = url.match(/\/uploads\/(.+)/);
   if (uploadsMatch) {
-    return { fileId: null, filename: uploadsMatch[1] };
+    return { fileId: null, filename: uploadsMatch[1], originalUrl: url };
   }
-  return { fileId: null, filename: url.split('/').pop() || 'Dokumen' };
+  return { fileId: null, filename: url.split('/').pop() || 'Dokumen', originalUrl: url };
 }
 
 // Helper: get file icon and color based on extension
@@ -62,10 +63,12 @@ function getFileIcon(filename: string) {
 function FilePreviewModal({ 
   fileId, 
   filename, 
+  url,
   onClose 
 }: { 
   fileId: string | null; 
   filename: string; 
+  url: string;
   onClose: () => void; 
 }) {
   const ext = filename.split('.').pop()?.toLowerCase();
@@ -88,10 +91,10 @@ function FilePreviewModal({
         </div>
 
         <div className="flex-1 overflow-auto p-2 min-h-0">
-          {fileId ? (
+          {(fileId || url) ? (
             isPdf ? (
               <iframe
-                src={`/api/file/preview/${fileId}?name=${encodeURIComponent(filename)}`}
+                src={fileId ? `/api/file/preview/${fileId}?name=${encodeURIComponent(filename)}` : url}
                 className="w-full h-[70vh] rounded-lg border border-slate-800"
                 title={filename}
               />
@@ -131,7 +134,7 @@ export default function LegislasiDetailPage({ params }: PageProps) {
   const [pengaju, setPengaju] = useState<any>(null);
   const [approvedBy, setApprovedBy] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [previewModal, setPreviewModal] = useState<{ fileId: string | null; filename: string } | null>(null);
+  const [previewModal, setPreviewModal] = useState<{ fileId: string | null; filename: string; url: string } | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -218,6 +221,7 @@ export default function LegislasiDetailPage({ params }: PageProps) {
         <FilePreviewModal
           fileId={previewModal.fileId}
           filename={previewModal.filename}
+          url={previewModal.url}
           onClose={() => setPreviewModal(null)}
         />
       )}
@@ -330,7 +334,7 @@ export default function LegislasiDetailPage({ params }: PageProps) {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setPreviewModal({ fileId: parsedFile.fileId, filename: parsedFile.filename })}
+                            onClick={() => setPreviewModal({ fileId: parsedFile.fileId, filename: parsedFile.filename, url: parsedFile.originalUrl })}
                             className="h-7 text-[11px] font-semibold border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 gap-1"
                           >
                             <Eye className="w-3 h-3" /> Lihat Isi Dokumen
