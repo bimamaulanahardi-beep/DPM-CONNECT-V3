@@ -35,7 +35,6 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useTheme } from 'next-themes';
 import { getInitials } from '@/lib/utils';
-import { mockNotifikasi } from '@/lib/mock-data/notifications';
 
 interface NavItem {
   label: string;
@@ -54,7 +53,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const [notifList, setNotifList] = useState(mockNotifikasi);
+  const [notifList, setNotifList] = useState<any[]>([]);
 
   // Authentication check
   useEffect(() => {
@@ -62,6 +61,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       router.replace('/login');
     }
   }, [status, router]);
+
+  // Fetch real notifications
+  useEffect(() => {
+    if (session?.user) {
+      const fetchNotifications = async () => {
+        try {
+          const res = await fetch('/api/notifikasi');
+          if (res.ok) {
+            const data = await res.json();
+            setNotifList(Array.isArray(data) ? data : []);
+          }
+        } catch (error) {
+          console.error('Failed to fetch notifications', error);
+        }
+      };
+      fetchNotifications();
+      // Optional: Poll every 1 minute
+      const interval = setInterval(fetchNotifications, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   if (status === 'loading') {
     return (
