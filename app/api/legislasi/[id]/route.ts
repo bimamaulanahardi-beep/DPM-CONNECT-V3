@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,6 +90,16 @@ export async function PUT(request: Request, { params }: Params) {
         tanggal: new Date().toISOString(),
       },
     });
+
+    // Create Notification if it was revised
+    if (updated.revisi_ke > existing.revisi_ke) {
+      await createInAppNotification({
+        judul: 'Draft RUU Direvisi',
+        pesan: `Draft "${updated.judul}" telah direvisi (Revisi ke-${updated.revisi_ke}).`,
+        jenis: 'legislasi',
+        link: `/dashboard/legislasi/${id}`,
+      });
+    }
 
     const formattedLeg = {
       ...updated,

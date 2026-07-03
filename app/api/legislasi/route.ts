@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,6 +86,14 @@ export async function POST(request: Request) {
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
+    });
+
+    // Create Notification
+    await createInAppNotification({
+      judul: 'Draft Produk Legislasi Baru',
+      pesan: `Draft "${judul}" telah diajukan dan menunggu pembahasan.`,
+      jenis: 'legislasi',
+      link: `/dashboard/legislasi/${id}`,
     });
 
     const formattedLeg = {

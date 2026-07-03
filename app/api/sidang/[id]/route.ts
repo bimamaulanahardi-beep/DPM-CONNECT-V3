@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,16 @@ export async function PUT(request: Request, { params }: Params) {
         tanggal: new Date().toISOString(),
       },
     });
+
+    // Create Notification if status changed to berlangsung
+    if (existing.status !== 'berlangsung' && updated.status === 'berlangsung') {
+      await createInAppNotification({
+        judul: 'Sidang Dimulai',
+        pesan: `Sidang "${updated.judul}" saat ini sedang berlangsung.`,
+        jenis: 'sidang',
+        link: `/dashboard/sidang/${id}`,
+      });
+    }
 
     const formattedSidang = {
       ...updated,

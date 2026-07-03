@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,23 @@ export async function PUT(request: Request, { params }: Params) {
       where: { id },
       data: dataToUpdate,
     });
+
+    // Create Notification if status changed
+    if (existing.status !== 'aktif' && updated.status === 'aktif') {
+      await createInAppNotification({
+        judul: 'Pemungutan Suara Dibuka',
+        pesan: `Sesi voting "${updated.judul}" telah dibuka. Silakan berikan suara Anda.`,
+        jenis: 'voting',
+        link: `/dashboard/voting/${id}`,
+      });
+    } else if (existing.status !== 'selesai' && updated.status === 'selesai') {
+      await createInAppNotification({
+        judul: 'Pemungutan Suara Ditutup',
+        pesan: `Sesi voting "${updated.judul}" telah ditutup.`,
+        jenis: 'voting',
+        link: `/dashboard/voting/${id}`,
+      });
+    }
 
     const formattedVoting = {
       id: updated.id,

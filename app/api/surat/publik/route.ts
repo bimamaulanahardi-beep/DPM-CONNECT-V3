@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import crypto from 'crypto';
+import { createInAppNotification } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,6 +104,14 @@ export async function POST(request: Request) {
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
+    });
+
+    // Create Notification
+    await createInAppNotification({
+      judul: 'Surat Masuk Baru',
+      pesan: `Surat masuk dari ${instansi} perihal "${perihal}" menunggu untuk didisposisikan.`,
+      jenis: 'surat',
+      link: `/dashboard/surat`,
     });
 
     return NextResponse.json({

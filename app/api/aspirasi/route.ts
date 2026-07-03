@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateTrackingCode } from '@/lib/utils';
+import { createInAppNotification } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +85,14 @@ export async function POST(request: Request) {
       include: {
         timeline: true,
       },
+    });
+
+    // Create Notification
+    await createInAppNotification({
+      judul: 'Aspirasi Baru Masuk',
+      pesan: `Aspirasi dengan topik "${judul}" telah diterima dari ${is_anonim ? 'Anonim' : nama_pengaju}.`,
+      jenis: 'aspirasi',
+      link: `/dashboard/aspirasi/${id}`,
     });
 
     return NextResponse.json(newAspirasi, { status: 201 });
