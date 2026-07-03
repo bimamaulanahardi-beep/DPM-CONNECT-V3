@@ -13,7 +13,12 @@ import {
   Download,
   AlertTriangle,
   Loader2,
-  Trash2
+  Trash2,
+  Upload,
+  Eye,
+  X,
+  File,
+  FileArchive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +35,105 @@ interface PageProps {
   };
 }
 
+// Helper: parse file URL to extract fileId and filename
+function parseFileUrl(url: string): { fileId: string | null; filename: string } {
+  if (!url) return { fileId: null, filename: 'Dokumen' };
+  // New format: /api/file/{fileId}?name={filename}
+  const apiMatch = url.match(/\/api\/file\/([^?]+)\?name=(.+)/);
+  if (apiMatch) {
+    return {
+      fileId: apiMatch[1],
+      filename: decodeURIComponent(apiMatch[2]),
+    };
+  }
+  // Old format: /uploads/{filename}
+  const uploadsMatch = url.match(/\/uploads\/(.+)/);
+  if (uploadsMatch) {
+    return { fileId: null, filename: uploadsMatch[1] };
+  }
+  // Fallback: use url as filename
+  return { fileId: null, filename: url.split('/').pop() || 'Dokumen' };
+}
+
+// Helper: get file icon and color based on extension
+function getFileIcon(filename: string) {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  if (ext === 'pdf') return { color: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20', label: 'PDF' };
+  if (ext === 'docx' || ext === 'doc') return { color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20', label: 'DOCX' };
+  if (ext === 'xlsx' || ext === 'xls') return { color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20', label: 'XLSX' };
+  return { color: 'text-slate-400', bg: 'bg-slate-800/60 border-slate-700', label: ext?.toUpperCase() || 'FILE' };
+}
+
+// File Preview Modal Component
+function FilePreviewModal({ 
+  fileId, 
+  filename, 
+  onClose 
+}: { 
+  fileId: string | null; 
+  filename: string; 
+  onClose: () => void; 
+}) {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const isPdf = ext === 'pdf';
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-800">
+          <div className="flex items-center gap-2">
+            <FileText className="w-4 h-4 text-amber-500" />
+            <span className="text-sm font-semibold text-white truncate max-w-xs">{filename}</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Modal Content */}
+        <div className="flex-1 overflow-auto p-2 min-h-0">
+          {fileId ? (
+            isPdf ? (
+              <iframe
+                src={`/api/file/preview/${fileId}?name=${encodeURIComponent(filename)}`}
+                className="w-full h-[70vh] rounded-lg border border-slate-800"
+                title={filename}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[50vh] text-center gap-4">
+                <FileArchive className="w-16 h-16 text-slate-600" />
+                <div>
+                  <p className="text-sm font-semibold text-white mb-1">{filename}</p>
+                  <p className="text-xs text-slate-400">
+                    Pratinjau tidak tersedia untuk format file ini ({ext?.toUpperCase()}).
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    File ini berisi dokumen rancangan peraturan yang telah diunggah oleh pengusul.
+                  </p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex flex-col items-center justify-center h-[50vh] text-center gap-4">
+              <AlertTriangle className="w-12 h-12 text-amber-500/60" />
+              <div>
+                <p className="text-sm font-semibold text-white mb-1">File tidak dapat dimuat</p>
+                <p className="text-xs text-slate-400">
+                  File ini mungkin diunggah dengan versi lama sistem dan tidak dapat ditampilkan.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LegislasiDetailPage({ params }: PageProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -43,6 +147,8 @@ export default function LegislasiDetailPage({ params }: PageProps) {
   const [isSavingContent, setIsSavingContent] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<LegislasiStatus>('diajukan');
   const [revisionsCount, setRevisionsCount] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewModal, setPreviewModal] = useState<{ fileId: string | null; filename: string } | null>(null);
 
   const fetchData = async () => {
     try {
@@ -54,7 +160,8 @@ export default function LegislasiDetailPage({ params }: PageProps) {
 
       if (legRes.ok) {
         setLegislasi(legData);
-        setDocumentContent(legData.konten || `BAB I\nKETENTUAN UMUM\n\nPasal 1\nDalam Peraturan ini yang dimaksud dengan:\n1. Dewan Perwakilan Mahasiswa...\n2. Badan Eksekutif Mahasiswa...`);
+        // konten is either a file URL or raw text content
+        setDocumentContent(legData.konten || '');
         setCurrentStatus(legData.status as LegislasiStatus);
         setRevisionsCount(legData.revisi_ke || 0);
       }
@@ -95,9 +202,60 @@ export default function LegislasiDetailPage({ params }: PageProps) {
 
   const userRole = session?.user ? (session.user as any).role : 'anggota';
   const isAuthorizedToApprove = ['pimpinan', 'ketua_komisi'].includes(userRole);
+  const isMahasiswa = userRole === 'mahasiswa';
   
   const pengaju = users.find((u) => u.id === legislasi.pengaju);
   const approvedBy = legislasi.approved_by ? users.find((u) => u.id === legislasi.approved_by) : null;
+
+  // Determine if konten is a file URL or raw text
+  const konten = legislasi.konten || '';
+  const isFileUrl = konten.startsWith('/api/file/') || konten.startsWith('/uploads/');
+  const parsedFile = isFileUrl ? parseFileUrl(konten) : null;
+  const fileInfo = parsedFile ? getFileIcon(parsedFile.filename) : null;
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!uploadRes.ok) {
+        const err = await uploadRes.json();
+        throw new Error(err.error || 'Gagal mengunggah file.');
+      }
+      const uploadData = await uploadRes.json();
+      const fileUrl = uploadData.url;
+
+      // Save the file URL as the document content
+      const nextRev = revisionsCount + 1;
+      const res = await fetch(`/api/legislasi/${params.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ konten: fileUrl, revisi_ke: nextRev }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setLegislasi(updated);
+        setDocumentContent(fileUrl);
+        setRevisionsCount(nextRev);
+        toast({ title: 'File Berhasil Diunggah', description: `File "${file.name}" berhasil disimpan sebagai revisi baru.` });
+      } else {
+        throw new Error('Gagal menyimpan referensi file.');
+      }
+    } catch (err: any) {
+      toast({ title: 'Gagal Mengunggah', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+      e.target.value = '';
+    }
+  };
 
   const handleSaveDocument = async () => {
     setIsSavingContent(true);
@@ -105,37 +263,21 @@ export default function LegislasiDetailPage({ params }: PageProps) {
       const nextRev = revisionsCount + 1;
       const res = await fetch(`/api/legislasi/${params.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          konten: documentContent,
-          revisi_ke: nextRev,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ konten: documentContent, revisi_ke: nextRev }),
       });
 
       if (res.ok) {
         const updated = await res.json();
         setLegislasi(updated);
         setRevisionsCount(nextRev);
-        toast({
-          title: 'Draft Disimpan',
-          description: 'Perubahan pada rancangan regulasi berhasil disimpan sebagai revisi baru.',
-        });
+        toast({ title: 'Draft Disimpan', description: 'Perubahan pada rancangan regulasi berhasil disimpan sebagai revisi baru.' });
       } else {
-        toast({
-          title: 'Gagal Menyimpan',
-          description: 'Terjadi kesalahan saat menyimpan draft.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Gagal Menyimpan', description: 'Terjadi kesalahan saat menyimpan draft.', variant: 'destructive' });
       }
     } catch (e) {
       console.error(e);
-      toast({
-        title: 'Kesalahan Jaringan',
-        description: 'Tidak dapat menghubungi server.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Kesalahan Jaringan', description: 'Tidak dapat menghubungi server.', variant: 'destructive' });
     } finally {
       setIsSavingContent(false);
     }
@@ -148,7 +290,6 @@ export default function LegislasiDetailPage({ params }: PageProps) {
         const currentUser = session?.user as any;
         updateData.approved_by = currentUser?.id || '1';
         updateData.tanggal_disahkan = new Date().toISOString().split('T')[0];
-        // Auto assign a formal TAP number if not set
         if (!legislasi.nomor) {
           updateData.nomor = `TAP DPM ITB RIAU/${String(new Date().getFullYear()).substring(2)}/00${legislasi.id.split('-')[1] || '1'}`;
         }
@@ -156,9 +297,7 @@ export default function LegislasiDetailPage({ params }: PageProps) {
 
       const res = await fetch(`/api/legislasi/${params.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
       });
 
@@ -166,16 +305,9 @@ export default function LegislasiDetailPage({ params }: PageProps) {
         const updated = await res.json();
         setLegislasi(updated);
         setCurrentStatus(newStatus);
-        toast({
-          title: 'Status Diperbarui',
-          description: `Draft RUU diubah statusnya menjadi "${newStatus.replace('_', ' ')}".`,
-        });
+        toast({ title: 'Status Diperbarui', description: `Draft RUU diubah statusnya menjadi "${newStatus.replace('_', ' ')}".` });
       } else {
-        toast({
-          title: 'Gagal Memperbarui Status',
-          description: 'Gagal mengupdate status regulasi.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Gagal Memperbarui Status', description: 'Gagal mengupdate status regulasi.', variant: 'destructive' });
       }
     } catch (e) {
       console.error(e);
@@ -187,32 +319,18 @@ export default function LegislasiDetailPage({ params }: PageProps) {
     
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/legislasi/${params.id}`, {
-        method: 'DELETE',
-      });
-      
+      const res = await fetch(`/api/legislasi/${params.id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast({
-          title: 'Legislasi Dihapus',
-          description: 'Regulasi/RUU telah berhasil dihapus dari sistem.',
-        });
+        toast({ title: 'Legislasi Dihapus', description: 'Regulasi/RUU telah berhasil dihapus dari sistem.' });
         router.push('/dashboard/legislasi');
       } else {
         const data = await res.json();
-        toast({
-          title: 'Gagal Menghapus',
-          description: data.error || 'Terjadi kesalahan saat menghapus legislasi.',
-          variant: 'destructive',
-        });
+        toast({ title: 'Gagal Menghapus', description: data.error || 'Terjadi kesalahan saat menghapus legislasi.', variant: 'destructive' });
         setIsDeleting(false);
       }
     } catch (e) {
       console.error(e);
-      toast({
-        title: 'Kesalahan Jaringan',
-        description: 'Tidak dapat menghubungi server.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Kesalahan Jaringan', description: 'Tidak dapat menghubungi server.', variant: 'destructive' });
       setIsDeleting(false);
     }
   };
@@ -229,6 +347,15 @@ export default function LegislasiDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
+      {/* Preview Modal */}
+      {previewModal && (
+        <FilePreviewModal
+          fileId={previewModal.fileId}
+          filename={previewModal.filename}
+          onClose={() => setPreviewModal(null)}
+        />
+      )}
+
       {/* Back Link & Delete Button */}
       <div className="flex justify-between items-center">
         <Link 
@@ -238,16 +365,18 @@ export default function LegislasiDetailPage({ params }: PageProps) {
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Kembali ke Daftar Legislasi
         </Link>
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          onClick={handleDeleteLegislasi}
-          disabled={isDeleting}
-          className="flex items-center gap-1.5 h-8 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors"
-        >
-          {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-          Hapus Legislasi
-        </Button>
+        {!isMahasiswa && (
+          <Button 
+            variant="destructive" 
+            size="sm" 
+            onClick={handleDeleteLegislasi}
+            disabled={isDeleting}
+            className="flex items-center gap-1.5 h-8 bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors"
+          >
+            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            Hapus Legislasi
+          </Button>
+        )}
       </div>
 
       {/* Main layout */}
@@ -299,26 +428,123 @@ export default function LegislasiDetailPage({ params }: PageProps) {
                       <FileText className="w-4 h-4 text-amber-500" /> Lembar Draft Naskah Akademik
                     </h3>
                     
+                    {/* Authorized users: upload new file or save text */}
                     {isAuthorizedToApprove && (
-                      <Button 
-                        onClick={handleSaveDocument}
-                        disabled={isSavingContent}
-                        size="sm"
-                        className="bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold h-8"
-                      >
-                        <Save className="w-3.5 h-3.5 mr-1" />
-                        {isSavingContent ? 'Menyimpan...' : 'Simpan Revisi'}
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {/* Upload file button */}
+                        <label className="cursor-pointer">
+                          <input
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx"
+                            className="hidden"
+                            onChange={handleFileUpload}
+                            disabled={isUploading}
+                          />
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold h-8 border transition-all
+                            ${isUploading 
+                              ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed' 
+                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border-slate-700 hover:border-slate-600'
+                            }`}>
+                            {isUploading ? (
+                              <><Loader2 className="w-3 h-3 animate-spin" /> Mengunggah...</>
+                            ) : (
+                              <><Upload className="w-3 h-3" /> Unggah File</>
+                            )}
+                          </span>
+                        </label>
+                        {/* Save text content button (only if content is not a file) */}
+                        {!isFileUrl && (
+                          <Button 
+                            onClick={handleSaveDocument}
+                            disabled={isSavingContent}
+                            size="sm"
+                            className="bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold h-8"
+                          >
+                            <Save className="w-3.5 h-3.5 mr-1" />
+                            {isSavingContent ? 'Menyimpan...' : 'Simpan Revisi'}
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
 
-                  <textarea
-                    value={documentContent}
-                    onChange={(e) => setDocumentContent(e.target.value)}
-                    disabled={!isAuthorizedToApprove}
-                    rows={16}
-                    className="w-full rounded-xl bg-slate-950 border border-slate-800 p-4 text-xs sm:text-sm text-white font-mono focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 leading-relaxed disabled:opacity-80"
-                  />
+                  {/* File Display Area */}
+                  {isFileUrl && parsedFile ? (
+                    // Display as a file card
+                    <div className="rounded-xl border border-slate-800 bg-slate-950/40 p-5">
+                      <div className="flex items-center gap-4">
+                        {/* File icon */}
+                        <div className={`w-14 h-14 rounded-xl border flex flex-col items-center justify-center shrink-0 ${fileInfo?.bg}`}>
+                          <FileText className={`w-6 h-6 ${fileInfo?.color}`} />
+                          <span className={`text-[8px] font-black mt-0.5 ${fileInfo?.color}`}>{fileInfo?.label}</span>
+                        </div>
+
+                        {/* File info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-white truncate">{parsedFile.filename}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Dokumen draf naskah akademik
+                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mt-3">
+                            {/* Preview button - available to everyone */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPreviewModal({ fileId: parsedFile.fileId, filename: parsedFile.filename })}
+                              className="h-7 text-[11px] font-semibold border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 gap-1"
+                            >
+                              <Eye className="w-3 h-3" /> Lihat Isi File
+                            </Button>
+
+                            {/* Download button - only for non-mahasiswa */}
+                            {!isMahasiswa && parsedFile.fileId && (
+                              <Button
+                                size="sm"
+                                asChild
+                                className="h-7 text-[11px] font-semibold bg-amber-500 hover:bg-amber-600 text-slate-950 gap-1"
+                              >
+                                <a 
+                                  href={`/api/file/${parsedFile.fileId}?name=${encodeURIComponent(parsedFile.filename)}`}
+                                  download={parsedFile.filename}
+                                >
+                                  <Download className="w-3 h-3" /> Unduh File
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Authorized: Replace file option */}
+                      {isAuthorizedToApprove && (
+                        <div className="mt-4 pt-4 border-t border-slate-800/60 flex items-center gap-2">
+                          <span className="text-[10px] text-slate-500">Ganti file dokumen:</span>
+                          <label className="cursor-pointer">
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx"
+                              className="hidden"
+                              onChange={handleFileUpload}
+                              disabled={isUploading}
+                            />
+                            <span className="text-[10px] font-semibold text-amber-500 hover:text-amber-400 cursor-pointer underline">
+                              Unggah file baru
+                            </span>
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Display as editable textarea (legacy text content)
+                    <textarea
+                      value={documentContent}
+                      onChange={(e) => setDocumentContent(e.target.value)}
+                      disabled={!isAuthorizedToApprove}
+                      rows={16}
+                      placeholder={isAuthorizedToApprove ? "Tulis isi naskah akademik di sini atau unggah file dokumen..." : "Belum ada konten dokumen."}
+                      className="w-full rounded-xl bg-slate-950 border border-slate-800 p-4 text-xs sm:text-sm text-white font-mono focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 leading-relaxed disabled:opacity-80"
+                    />
+                  )}
                 </TabsContent>
 
                 {/* Tab: Summary */}

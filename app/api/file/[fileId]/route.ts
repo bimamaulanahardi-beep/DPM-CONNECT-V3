@@ -1,0 +1,61 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { fileId: string } }
+) {
+  try {
+    const fileId = params.fileId;
+    const { searchParams } = new URL(request.url);
+    const filename = searchParams.get('name') || 'file';
+
+    // Look up the file in AuditLog records
+    const logs = await prisma.auditLog.findMany({
+      where: {
+        aksi: 'Mengunggah berkas',
+        modul: 'Penyimpanan',
+      },
+      orderBy: { tanggal: 'desc' },
+      take: 200,
+    });
+
+    // Find the matching file record
+    let fileRecord: any = null;
+    for (const log of logs) {
+      try {
+        const parsed = JSON.parse(log.detail);
+        if (parsed.type === 'FILE_STORAGE' && parsed.fileId === fileId) {
+          fileRecord = parsed;
+          break;
+        }
+      } catch {
+        // Not a JSON detail, skip
+      }
+    }
+
+    if (!fileRecord) {
+      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+    }
+
+    // Parse data URI
+    const dataUri = fileRecord.dataUri as string;
+    const [header, base64Data] = dataUri.split(',');
+    const mimeType = header.match(/:(.*?);/)?.[1] || 'application/octet-stream';
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    return new NextResponse(buffer, {
+      headers: {
+        'Content-Type': mimeType,
+        'Content-Disposition': `attachment; filename="${encodeURIComponent(filename)}"`,
+        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'private, max-age=3600',
+      },
+    });
+  } catch (error: any) {
+    console.error('File serve error:', error);
+    return NextResponse.json({ error: 'Failed to serve file' }, { status: 500 });
+  }
+}

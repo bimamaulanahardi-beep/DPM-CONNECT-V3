@@ -6,7 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { 
   ArrowLeft,
-  Mail
+  Mail,
+  Upload,
+  X,
+  FileText,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +29,8 @@ export default function BaruSuratPage() {
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [isi, setIsi] = useState('Dengan hormat,\nSehubungan dengan akan dilaksanakannya agenda Rapat Koordinasi Tahunan DPM ITB Riau, kami mengundang Saudara/i untuk hadir pada:\n\nHari/Tanggal: ...\nWaktu: ...\nTempat: ...\n\nDemikian surat undangan ini kami sampaikan. Atas perhatian dan kehadiran Saudara/i, kami ucapkan terima kasih.');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lampiranFile, setLampiranFile] = useState<File | null>(null);
+  const [isUploadingLampiran, setIsUploadingLampiran] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +43,22 @@ export default function BaruSuratPage() {
     const user = session?.user as any;
 
     try {
+      // Upload lampiran file if any
+      let lampiranList: any[] = [];
+      if (lampiranFile) {
+        setIsUploadingLampiran(true);
+        const formData = new FormData();
+        formData.append('file', lampiranFile);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+        setIsUploadingLampiran(false);
+        if (!uploadRes.ok) throw new Error('Gagal mengunggah lampiran.');
+        const uploadData = await uploadRes.json();
+        lampiranList = [{ name: uploadData.name, url: uploadData.url, fileId: uploadData.fileId }];
+      }
+
       const res = await fetch('/api/surat', {
         method: 'POST',
         headers: {
@@ -51,6 +73,7 @@ export default function BaruSuratPage() {
           kepada,
           tanggal,
           isi_singkat: isi,
+          lampiran: lampiranList.length > 0 ? lampiranList : null,
           created_by: user?.id || '1',
         }),
       });
@@ -169,6 +192,37 @@ export default function BaruSuratPage() {
                   className="w-full rounded-lg bg-slate-950/50 border border-slate-800 p-3 text-xs sm:text-sm text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 font-sans leading-relaxed"
                   required
                 />
+              </div>
+
+              {/* Lampiran Upload */}
+              <div className="space-y-2">
+                <Label className="text-slate-355 font-semibold text-xs">Lampiran Surat (Opsional)</Label>
+                {lampiranFile ? (
+                  <div className="flex items-center gap-3 p-3 bg-slate-950/60 border border-slate-700 rounded-lg">
+                    <FileText className="w-4 h-4 text-amber-500 shrink-0" />
+                    <span className="text-xs text-slate-300 flex-1 truncate">{lampiranFile.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => setLampiranFile(null)}
+                      className="text-slate-500 hover:text-red-400 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                      className="hidden"
+                      onChange={(e) => setLampiranFile(e.target.files?.[0] || null)}
+                    />
+                    <div className="flex items-center gap-2 p-3 bg-slate-950/60 border border-dashed border-slate-700 rounded-lg hover:border-amber-500/40 transition-colors">
+                      <Upload className="w-4 h-4 text-slate-500" />
+                      <span className="text-xs text-slate-500">Klik untuk unggah lampiran (PDF/Word/Gambar)</span>
+                    </div>
+                  </label>
+                )}
               </div>
 
               <div className="flex gap-4 pt-4 border-t border-slate-800/60">

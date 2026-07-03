@@ -222,14 +222,27 @@ export default function SuratListPage() {
                     {deletingId === surat.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                   </Button>
                 )}
-                <Button 
-                  onClick={() => alert(`Mengunduh berkas surat: ${surat.id}.pdf (Mock PDF)`)}
-                  variant="ghost" 
-                  size="sm" 
-                  className="text-amber-500 hover:text-amber-400 hover:bg-slate-900 border border-slate-800 hover:border-slate-800 font-bold text-xs h-8 px-4 flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" /> Unduh PDF
-                </Button>
+                {(surat.lampiran && surat.lampiran.length > 0) ? (
+                  surat.lampiran.map((lamp: any, idx: number) => {
+                    const fileName = lamp.name || lamp.url?.split('/').pop() || `surat-${surat.id}.pdf`;
+                    const downloadUrl = lamp.url || lamp;
+                    return (
+                      <Button
+                        key={idx}
+                        asChild
+                        variant="ghost"
+                        size="sm"
+                        className="text-amber-500 hover:text-amber-400 hover:bg-slate-900 border border-slate-800 hover:border-slate-800 font-bold text-xs h-8 px-4 flex items-center gap-1.5"
+                      >
+                        <a href={downloadUrl} download={fileName} target="_blank" rel="noopener noreferrer">
+                          <Download className="w-3.5 h-3.5" /> Unduh PDF
+                        </a>
+                      </Button>
+                    );
+                  })
+                ) : (
+                  <span className="text-[10px] text-slate-600 italic px-2">Tidak ada lampiran</span>
+                )}
               </div>
             </div>
           ))}

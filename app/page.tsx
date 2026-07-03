@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Logo } from '@/components/common/logo';
@@ -24,12 +24,33 @@ import { Card, CardContent } from '@/components/ui/card';
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [statsData, setStatsData] = useState({
+    sidangTerlaksana: 0,
+    produkLegislasi: 0,
+    aspirasiMasuk: 0,
+    tindakLanjut: 0,
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/publik/stats');
+        if (res.ok) {
+          const data = await res.json();
+          setStatsData(data);
+        }
+      } catch (e) {
+        console.error('Error fetching public stats:', e);
+      }
+    };
+    fetchStats();
+  }, []);
 
   const stats = [
-    { label: 'Sidang Terlaksana', value: '0', desc: 'Sidang paripurna & komisi' },
-    { label: 'Produk Legislasi', value: '0', desc: 'RUU & Tap DPM disahkan' },
-    { label: 'Aspirasi Masuk', value: '0', desc: 'Dari seluruh mahasiswa' },
-    { label: 'Tindak Lanjut', value: '0', desc: 'Penyelesaian aspirasi' },
+    { label: 'Sidang Terlaksana', value: statsData.sidangTerlaksana.toString(), desc: 'Sidang paripurna & komisi' },
+    { label: 'Produk Legislasi', value: statsData.produkLegislasi.toString(), desc: 'RUU & Tap DPM disahkan' },
+    { label: 'Aspirasi Masuk', value: statsData.aspirasiMasuk.toString(), desc: 'Dari seluruh mahasiswa' },
+    { label: 'Tindak Lanjut', value: statsData.tindakLanjut.toString(), desc: 'Penyelesaian aspirasi' },
   ];
 
   const komisiList = [

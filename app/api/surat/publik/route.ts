@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -24,7 +22,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Data tidak lengkap. Nama, instansi, perihal, dan isi singkat wajib diisi.' }, { status: 400 });
     }
 
-    let lampiranUrl: string | null = null;
+    let lampiranList: any[] = [];
 
     // Handle optional file upload
     if (file && file.size > 0) {
@@ -43,10 +41,35 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Jenis file tidak diizinkan. Hanya PDF, JPG, PNG, dan Word.' }, { status: 400 });
       }
 
-      const originalName = (file as any).name || `surat-masuk-${Date.now()}`;
-      // Simpan sebagai Base64 (Data URI) langsung ke Database agar berfungsi di Netlify Serverless
+      const originalName = (file as any).name || `surat-masuk-${Date.now()}.pdf`;
+      const fileId = `${Date.now()}-${crypto.randomUUID().split('-')[0]}`;
       const base64Data = buffer.toString('base64');
-      lampiranUrl = `data:${file.type};base64,${base64Data}`;
+      const dataUri = `data:${file.type};base64,${base64Data}`;
+
+      // Store file in AuditLog for retrieval via /api/file/{fileId}
+      await prisma.auditLog.create({
+        data: {
+          user: `Publik: ${nama_pengirim}`,
+          aksi: 'Mengunggah berkas',
+          modul: 'Penyimpanan',
+          detail: JSON.stringify({
+            type: 'FILE_STORAGE',
+            fileId,
+            filename: originalName,
+            mimeType: file.type,
+            sizeBytes: buffer.length,
+            dataUri,
+          }),
+          ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
+          tanggal: new Date().toISOString(),
+        },
+      });
+
+      lampiranList = [{ 
+        name: originalName, 
+        url: `/api/file/${fileId}?name=${encodeURIComponent(originalName)}`,
+        fileId
+      }];
     }
 
     const id = `SRT-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
@@ -63,7 +86,7 @@ export async function POST(request: Request) {
         kepada: 'DPM ITB Riau',
         tanggal: tanggal || new Date().toISOString().split('T')[0],
         isi_singkat,
-        lampiran: lampiranUrl ? JSON.stringify([{ name: 'Lampiran Surat', url: lampiranUrl }]) : null,
+        lampiran: lampiranList.length > 0 ? JSON.stringify(lampiranList) : null,
         disposisi_kepada: null,
         disposisi_catatan: `Pengirim: ${nama_pengirim} | Instansi: ${instansi} | Email: ${email_pengirim || '-'}`,
         created_by: 'public',

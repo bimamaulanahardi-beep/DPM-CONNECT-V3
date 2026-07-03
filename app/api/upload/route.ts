@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,19 +40,30 @@ export async function POST(request: Request) {
     }
 
     const originalName = (file as any).name || `upload-${Date.now()}`;
-    const filename = originalName; // Kita pakai nama asli saja
+    const filename = originalName;
     
-    // Convert directly to Base64 (Data URI) to support serverless/Netlify environments
+    // Convert to Base64 Data URI for serverless/Vercel environments
     const base64Data = buffer.toString('base64');
     const dataUri = `data:${file.type};base64,${base64Data}`;
 
-    // Record to AuditLog
+    // Generate a unique file ID for the download URL
+    const fileId = `${Date.now()}-${crypto.randomUUID().split('-')[0]}`;
+
+    // Store file data in AuditLog detail (as JSON) for retrieval
+    // We use a separate storage mechanism via a dedicated file record
     await prisma.auditLog.create({
       data: {
         user: session.user?.name || 'Anggota DPM',
         aksi: 'Mengunggah berkas',
         modul: 'Penyimpanan',
-        detail: `Mengunggah file: "${filename}" (${buffer.length} bytes)`,
+        detail: JSON.stringify({
+          type: 'FILE_STORAGE',
+          fileId,
+          filename,
+          mimeType: file.type,
+          sizeBytes: buffer.length,
+          dataUri,
+        }),
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
@@ -63,8 +71,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      url: `/uploads/${filename}`,
+      url: `/api/file/${fileId}?name=${encodeURIComponent(filename)}`,
       name: filename,
+      fileId,
       sizeBytes: buffer.length
     });
   } catch (error: any) {
