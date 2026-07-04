@@ -20,8 +20,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { generateTrackingCode } from '@/lib/utils';
 import { AspirasiKategori } from '@/lib/types';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AspirasiFormPage() {
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [isAnonim, setIsAnonim] = useState(false);
   const [kategori, setKategori] = useState<AspirasiKategori>('fasilitas');
@@ -36,11 +38,11 @@ export default function AspirasiFormPage() {
 
   const handleNext = () => {
     if (step === 1 && (!judul || !deskripsi)) {
-      alert('Mohon lengkapi judul dan deskripsi aspirasi Anda');
+      toast({ title: 'Mohon Lengkapi Data', description: 'Silakan isi judul dan deskripsi aspirasi Anda.', variant: 'destructive' });
       return;
     }
     if (step === 2 && !isAnonim && (!nama || !nim || !email)) {
-      alert('Mohon isi nama, NIM, dan email kampus Anda atau pilih opsi Kirim Sebagai Anonim');
+      toast({ title: 'Mohon Lengkapi Identitas', description: 'Silakan isi nama, NIM, dan email kampus Anda atau pilih opsi Kirim Sebagai Anonim.', variant: 'destructive' });
       return;
     }
     setStep(prev => prev + 1);
@@ -53,7 +55,7 @@ export default function AspirasiFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!agreeTerms) {
-      alert('Anda harus menyetujui pernyataan kebenaran data');
+      toast({ title: 'Persetujuan Diperlukan', description: 'Anda harus menyetujui pernyataan kebenaran data.', variant: 'destructive' });
       return;
     }
 
@@ -83,11 +85,11 @@ export default function AspirasiFormPage() {
         setCreatedCode(trackingCode);
         setStep(4);
       } else {
-        alert(data.error || 'Gagal mengirimkan aspirasi');
+        toast({ title: 'Gagal Mengirim', description: data.error || 'Gagal mengirimkan aspirasi', variant: 'destructive' });
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan jaringan.');
+      toast({ title: 'Kesalahan Jaringan', description: 'Terjadi kesalahan jaringan.', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -95,7 +97,7 @@ export default function AspirasiFormPage() {
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(createdCode);
-    alert('Kode tracking disalin!');
+    toast({ title: 'Berhasil Disalin!', description: 'Kode tracking telah disalin ke clipboard.' });
   };
 
   return (
