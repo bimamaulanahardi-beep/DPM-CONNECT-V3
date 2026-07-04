@@ -13,32 +13,12 @@ export async function GET(
     const { searchParams } = new URL(request.url);
     const filename = searchParams.get('name') || 'file';
 
-    // Look up the file in AuditLog records
-    const logs = await prisma.auditLog.findMany({
+    // Look up the file in FileStorage table
+    const fileRecord = await prisma.fileStorage.findUnique({
       where: {
-        aksi: 'Mengunggah berkas',
-        modul: 'Penyimpanan',
-        detail: {
-          contains: fileId,
-        },
-      },
-      orderBy: { tanggal: 'desc' },
-      take: 10,
-    });
-
-    // Find the matching file record
-    let fileRecord: any = null;
-    for (const log of logs) {
-      try {
-        const parsed = JSON.parse(log.detail);
-        if (parsed.type === 'FILE_STORAGE' && parsed.fileId === fileId) {
-          fileRecord = parsed;
-          break;
-        }
-      } catch {
-        // Not a JSON detail, skip
+        fileId: fileId,
       }
-    }
+    });
 
     if (!fileRecord) {
       return NextResponse.json({ error: 'File not found' }, { status: 404 });

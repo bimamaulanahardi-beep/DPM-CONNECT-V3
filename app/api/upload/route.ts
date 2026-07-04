@@ -49,21 +49,26 @@ export async function POST(request: Request) {
     // Generate a unique file ID for the download URL
     const fileId = `${Date.now()}-${crypto.randomUUID().split('-')[0]}`;
 
-    // Store file data in AuditLog detail (as JSON) for retrieval
-    // We use a separate storage mechanism via a dedicated file record
+    // Store file in FileStorage table
+    await prisma.fileStorage.create({
+      data: {
+        fileId,
+        filename,
+        mimeType: file.type,
+        sizeBytes: buffer.length,
+        dataUri,
+        uploadedBy: session.user?.name || 'Anggota DPM',
+        tanggal: new Date().toISOString(),
+      }
+    });
+
+    // Store a lightweight log in AuditLog
     await prisma.auditLog.create({
       data: {
         user: session.user?.name || 'Anggota DPM',
         aksi: 'Mengunggah berkas',
         modul: 'Penyimpanan',
-        detail: JSON.stringify({
-          type: 'FILE_STORAGE',
-          fileId,
-          filename,
-          mimeType: file.type,
-          sizeBytes: buffer.length,
-          dataUri,
-        }),
+        detail: `Mengunggah file ${filename} (${fileId})`,
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },

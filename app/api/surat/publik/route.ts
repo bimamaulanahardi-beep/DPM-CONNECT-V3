@@ -47,20 +47,26 @@ export async function POST(request: Request) {
       const base64Data = buffer.toString('base64');
       const dataUri = `data:${file.type};base64,${base64Data}`;
 
-      // Store file in AuditLog for retrieval via /api/file/{fileId}
+      // Store file in FileStorage
+      await prisma.fileStorage.create({
+        data: {
+          fileId,
+          filename: originalName,
+          mimeType: file.type,
+          sizeBytes: buffer.length,
+          dataUri,
+          uploadedBy: `Publik: ${nama_pengirim}`,
+          tanggal: new Date().toISOString(),
+        }
+      });
+
+      // Record lightweight audit log
       await prisma.auditLog.create({
         data: {
           user: `Publik: ${nama_pengirim}`,
-          aksi: 'Mengunggah berkas',
+          aksi: 'Mengunggah berkas lampiran',
           modul: 'Penyimpanan',
-          detail: JSON.stringify({
-            type: 'FILE_STORAGE',
-            fileId,
-            filename: originalName,
-            mimeType: file.type,
-            sizeBytes: buffer.length,
-            dataUri,
-          }),
+          detail: `Mengunggah lampiran surat ${originalName} (${fileId})`,
           ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
           tanggal: new Date().toISOString(),
         },

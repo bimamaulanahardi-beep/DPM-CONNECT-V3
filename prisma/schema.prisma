@@ -174,3 +174,14 @@ model AuditLog {
   ip_address String
   tanggal    String
 }
+
+model FileStorage {
+  id         String @id @default(uuid())
+  fileId     String @unique
+  filename   String
+  mimeType   String
+  sizeBytes  Int
+  dataUri    String @db.Text
+  uploadedBy String
+  tanggal    String
+}
