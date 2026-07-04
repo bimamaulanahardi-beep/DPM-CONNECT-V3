@@ -18,9 +18,12 @@ export async function GET(
       where: {
         aksi: 'Mengunggah berkas',
         modul: 'Penyimpanan',
+        detail: {
+          contains: fileId,
+        },
       },
       orderBy: { tanggal: 'desc' },
-      take: 200,
+      take: 10,
     });
 
     // Find the matching file record
