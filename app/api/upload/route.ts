@@ -41,15 +41,59 @@ export async function POST(request: Request) {
 
     const originalName = (file as any).name || `upload-${Date.now()}`;
     const filename = originalName;
+    const uniqueFileName = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+    // Upload ke Supabase
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
     
-    // Convert to Base64 Data URI for serverless/Vercel environments
+    if (supabaseUrl && supabaseKey) {
+      const { createClient } = await import('@supabase/supabase-js');
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('uploads')
+        .upload(uniqueFileName, buffer, {
+          contentType: file.type,
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        return NextResponse.json({ error: 'Gagal mengupload file ke penyimpanan cloud (Supabase).' }, { status: 500 });
+      }
+
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('uploads')
+        .getPublicUrl(uniqueFileName);
+
+      // Store a lightweight log in AuditLog
+      await prisma.auditLog.create({
+        data: {
+          user: session.user?.name || 'Anggota DPM',
+          aksi: 'Mengunggah berkas',
+          modul: 'Penyimpanan',
+          detail: `Mengunggah file ke Supabase: ${filename}`,
+          ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
+          tanggal: new Date().toISOString(),
+        },
+      });
+
+      return NextResponse.json({ 
+        success: true, 
+        url: publicUrl,
+        name: filename,
+        sizeBytes: buffer.length
+      });
+    }
+
+    // Fallback jika env Supabase belum diset (kembali ke Base64 Data URI)
     const base64Data = buffer.toString('base64');
     const dataUri = `data:${file.type};base64,${base64Data}`;
-
-    // Generate a unique file ID for the download URL
     const fileId = `${Date.now()}-${crypto.randomUUID().split('-')[0]}`;
 
-    // Store file in FileStorage table
     await prisma.fileStorage.create({
       data: {
         fileId,
@@ -60,18 +104,6 @@ export async function POST(request: Request) {
         uploadedBy: session.user?.name || 'Anggota DPM',
         tanggal: new Date().toISOString(),
       }
-    });
-
-    // Store a lightweight log in AuditLog
-    await prisma.auditLog.create({
-      data: {
-        user: session.user?.name || 'Anggota DPM',
-        aksi: 'Mengunggah berkas',
-        modul: 'Penyimpanan',
-        detail: `Mengunggah file ${filename} (${fileId})`,
-        ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
-        tanggal: new Date().toISOString(),
-      },
     });
 
     return NextResponse.json({ 

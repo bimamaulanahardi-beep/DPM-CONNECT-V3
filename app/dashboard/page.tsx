@@ -22,7 +22,10 @@ import {
   Tooltip, 
   ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
+  PieChart,
+  Pie,
+  Cell
 } from 'recharts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -40,6 +43,7 @@ export default function DashboardPage() {
   const [recentAspirasi, setRecentAspirasi] = useState<any[]>([]);
   const [aspirasiBulanData, setAspirasiBuilanData] = useState<any[]>([]);
   const [kehadiranSidangData, setKehadiranSidangData] = useState<any[]>([]);
+  const [prokerStatusData, setProkerStatusData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -62,6 +66,7 @@ export default function DashboardPage() {
             setRecentAspirasi(data.recentAspirasi || []);
             setAspirasiBuilanData(data.aspirasiBulanData || []);
             setKehadiranSidangData(data.kehadiranSidangData || []);
+            setProkerStatusData(data.prokerStatusData || []);
           }
         } catch (e) {
           console.error('Error fetching dashboard statistics:', e);
@@ -240,6 +245,62 @@ export default function DashboardPage() {
                     <Bar dataKey="persentase" name="Kehadiran (%)" fill="#6366f1" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Pie Chart: Status Proker BEM */}
+            <Card className="bg-slate-900/40 border-slate-800 lg:col-span-3">
+              <CardHeader className="pb-2 flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-bold text-white tracking-wide uppercase">Status Program Kerja BEM</CardTitle>
+                  <CardDescription className="text-xs text-slate-500">Distribusi status pelaksanaan proker BEM ITB Riau</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="h-64 flex items-center justify-center">
+                {prokerStatusData.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center gap-2">
+                    <Sparkles className="w-8 h-8 text-slate-700" />
+                    <p className="text-xs text-slate-500">Belum ada data program kerja BEM.</p>
+                  </div>
+                ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={prokerStatusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {prokerStatusData.map((entry, index) => {
+                        const colors = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'];
+                        return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '8px' }}
+                      itemStyle={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                )}
+                {prokerStatusData.length > 0 && (
+                  <div className="flex flex-col gap-2 min-w-[120px]">
+                    {prokerStatusData.map((entry, index) => {
+                      const colors = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444', '#8b5cf6'];
+                      return (
+                        <div key={index} className="flex items-center gap-2 text-xs text-slate-300">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: colors[index % colors.length] }} />
+                          <span className="flex-1">{entry.name}</span>
+                          <span className="font-bold">{entry.value}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>

@@ -10,13 +10,15 @@ import {
   Upload,
   X,
   FileText,
-  Loader2
+  Loader2,
+  PenLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { SignaturePad } from '@/components/common/signature-pad';
 
 export default function BaruSuratPage() {
   const router = useRouter();
@@ -31,6 +33,8 @@ export default function BaruSuratPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lampiranFile, setLampiranFile] = useState<File | null>(null);
   const [isUploadingLampiran, setIsUploadingLampiran] = useState(false);
+  const [tandaTangan, setTandaTangan] = useState<string | null>(null);
+  const [showSignaturePad, setShowSignaturePad] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +78,7 @@ export default function BaruSuratPage() {
           tanggal,
           isi_singkat: isi,
           lampiran: lampiranList.length > 0 ? lampiranList : null,
+          tanda_tangan: tandaTangan || null,
           created_by: user?.id || '1',
         }),
       });
@@ -225,6 +230,60 @@ export default function BaruSuratPage() {
                 )}
               </div>
 
+              {/* Tanda Tangan Digital */}
+              <div className="space-y-2 border-t border-slate-800/60 pt-4">
+                <Label className="text-slate-355 font-semibold text-xs flex items-center gap-2">
+                  <PenLine className="w-3.5 h-3.5 text-amber-500" />
+                  Tanda Tangan Digital (Opsional)
+                </Label>
+                {!showSignaturePad && !tandaTangan && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowSignaturePad(true)}
+                    className="w-full border-dashed border-slate-700 text-slate-400 hover:text-amber-400 hover:border-amber-500/40 hover:bg-slate-950 h-10"
+                  >
+                    <PenLine className="w-4 h-4 mr-2" />
+                    Klik untuk Bubuhkan Tanda Tangan
+                  </Button>
+                )}
+                {showSignaturePad && !tandaTangan && (
+                  <div className="p-3 bg-slate-950/60 border border-slate-700 rounded-lg">
+                    <p className="text-xs text-slate-400 mb-3">Tanda tangani di kanvas putih di bawah ini menggunakan mouse atau jari:</p>
+                    <SignaturePad
+                      onSave={(data) => {
+                        if (data) {
+                          setTandaTangan(data);
+                          setShowSignaturePad(false);
+                        }
+                      }}
+                      width={360}
+                      height={160}
+                    />
+                  </div>
+                )}
+                {tandaTangan && (
+                  <div className="flex items-center gap-3 p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                    <div className="bg-white rounded p-1 shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={tandaTangan} alt="TTD" className="h-10 w-auto object-contain" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-emerald-400 font-semibold">✓ Tanda Tangan Tersimpan</p>
+                      <p className="text-[10px] text-slate-500">Akan ditampilkan di bagian bawah kanan surat.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setTandaTangan(null); setShowSignaturePad(false); }}
+                      className="text-slate-500 hover:text-red-400 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-4 pt-4 border-t border-slate-800/60">
                 <Button 
                   type="button"
@@ -289,14 +348,24 @@ export default function BaruSuratPage() {
 
             {/* Signature Block */}
             <div className="flex justify-end pt-6 font-sans">
-              <div className="text-center space-y-16 w-48">
+              <div className="text-center space-y-2 w-48">
                 <div>
                   <span className="block leading-none">Hormat Kami,</span>
                   <span className="block font-bold">Ketua DPM ITB Riau</span>
                 </div>
+                {tandaTangan ? (
+                  <div className="flex justify-center py-1">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={tandaTangan} alt="Tanda Tangan" className="h-16 w-auto object-contain" />
+                  </div>
+                ) : (
+                  <div className="h-16 flex items-end justify-center">
+                    <span className="text-[9px] text-slate-400 italic">(tanda tangan)</span>
+                  </div>
+                )}
                 <div>
-                  <span className="block font-bold underline">Ahmad Fadhillah Ramadhan</span>
-                  <span className="text-[8px] text-slate-500 block">NIM: 2021001001</span>
+                  <span className="block font-bold underline">{(session?.user as any)?.name || 'Ahmad Fadhillah Ramadhan'}</span>
+                  <span className="text-[8px] text-slate-500 block">NIM: {(session?.user as any)?.nim || '2021001001'}</span>
                 </div>
               </div>
             </div>

@@ -32,6 +32,16 @@ export async function GET(request: Request, { params }: Params) {
       return NextResponse.json({ error: 'Voting session not found' }, { status: 404 });
     }
 
+    // Periksa apakah user yang sedang login sudah pernah mem-vote
+    const existingVote = await prisma.voteRecord.findUnique({
+      where: {
+        voting_id_user_nim: {
+          voting_id: id,
+          user_nim: user.nim,
+        }
+      }
+    });
+
     const formattedVoting = {
       id: item.id,
       judul: item.judul,
@@ -51,6 +61,7 @@ export async function GET(request: Request, { params }: Params) {
         total: item.hasil_total,
       },
       created_by: item.created_by,
+      has_voted: !!existingVote,
     };
 
     return NextResponse.json(formattedVoting);

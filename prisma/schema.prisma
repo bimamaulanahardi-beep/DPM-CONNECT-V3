@@ -132,8 +132,20 @@ model Voting {
   hasil_abstain      Int
   hasil_total        Int
   created_by         String
+  records            VoteRecord[]
 
   @@index([status])
+}
+
+model VoteRecord {
+  id        String   @id @default(uuid())
+  voting_id String
+  user_nim  String
+  pilihan   String? 
+  tanggal   String
+  voting    Voting   @relation(fields: [voting_id], references: [id], onDelete: Cascade)
+  
+  @@unique([voting_id, user_nim])
 }
 
 model Surat {
@@ -147,6 +159,7 @@ model Surat {
   tanggal           String
   isi_singkat       String
   lampiran          String? // Stringified JSON array
+  tanda_tangan      String? @db.Text
   disposisi_kepada  String?
   disposisi_catatan String?
   created_by        String
@@ -185,3 +198,158 @@ model FileStorage {
   uploadedBy String
   tanggal    String
 }
+
+// ============================================
+// MODUL PEMILU RAYA (PEMIRA) V2.0
+// ============================================
+
+model PemiraEvent {
+  id              String   @id @default(uuid())
+  judul           String
+  deskripsi       String
+  tanggal_mulai   String
+  tanggal_selesai String
+  status          String   @default("draft") // draft, aktif, selesai
+  total_dpt       Int      @default(0)
+  created_by      String
+  created_at      DateTime @default(now())
+  
+  candidates      PemiraCandidate[]
+  records         PemiraVoteRecord[]
+
+  @@index([status])
+}
+
+model PemiraCandidate {
+  id              String   @id @default(uuid())
+  pemira_id       String
+  nomor_urut      Int
+  nama_ketua      String
+  nama_wakil      String?
+  foto_url        String?
+  visi            String   @db.Text
+  misi            String   @db.Text
+  total_suara     Int      @default(0)
+  
+  pemira          PemiraEvent @relation(fields: [pemira_id], references: [id], onDelete: Cascade)
+  
+  @@index([pemira_id])
+}
+
+model PemiraVoteRecord {
+  id              String   @id @default(uuid())
+  pemira_id       String
+  user_nim        String
+  voter_nama      String?
+  voter_prodi     String?
+  tanggal         String
+  
+  pemira          PemiraEvent @relation(fields: [pemira_id], references: [id], onDelete: Cascade)
+  
+  @@unique([pemira_id, user_nim])
+}
+
+// ============================================
+// MODUL PERIZINAN KEGIATAN
+// ============================================
+
+model IzinKegiatan {
+  id                String                  @id @default(uuid())
+  kode              String                  @unique
+  nama_kegiatan     String
+  penyelenggara     String
+  penanggung_jawab  String
+  no_hp_pj          String
+  email_pj          String?
+  tanggal_mulai     String
+  tanggal_selesai   String
+  waktu_mulai       String
+  waktu_selesai     String
+  lokasi            String
+  deskripsi         String
+  estimasi_peserta  Int
+  status            String                  @default("menunggu") // menunggu, disetujui, ditolak, perlu_revisi
+  catatan_dpm       String?
+  diproses_oleh     String?
+  tanggal_diajukan  String
+  tanggal_diproses  String?
+  lampiran          String?
+  timeline          IzinKegiatanTimeline[]
+
+  @@index([status])
+  @@index([tanggal_mulai])
+}
+
+model IzinKegiatanTimeline {
+  id          String       @id @default(uuid())
+  izin_id     String
+  status      String
+  keterangan  String
+  tanggal     String
+  petugas     String?
+  izin        IzinKegiatan @relation(fields: [izin_id], references: [id], onDelete: Cascade)
+}
+
+// ============================================
+// MODUL REFERENDUM DIGITAL
+// ============================================
+
+model Referendum {
+  id               String            @id @default(uuid())
+  judul            String
+  deskripsi        String
+  pertanyaan       String
+  opsi             String            // Stringified JSON array of options
+  status           String            @default("draft") // draft, aktif, selesai
+  tanggal_mulai    String
+  tanggal_selesai  String
+  total_pemilih    Int               @default(0)
+  is_publik        Boolean           @default(false)
+  created_by       String
+  created_at       String
+  votes            ReferendumVote[]
+
+  @@index([status])
+}
+
+model ReferendumVote {
+  id            String     @id @default(uuid())
+  referendum_id String
+  user_nim      String
+  pilihan       String
+  tanggal       String
+  referendum    Referendum @relation(fields: [referendum_id], references: [id], onDelete: Cascade)
+
+  @@unique([referendum_id, user_nim])
+}
+
+// ============================================
+// MODUL LAPORAN LPJ DIGITAL
+// ============================================
+
+model LaporanLPJ {
+  id              String       @id @default(uuid())
+  judul           String
+  periode         String       // e.g., "2025/2026"
+  lembaga         String       // e.g., "DPM ITB Riau", "BEM ITB Riau"
+  ketua           String
+  status          String       @default("draft") // draft, diterbitkan
+  ringkasan       String       @db.Text
+  created_by      String
+  created_at      String
+  updated_at      String
+  sections        LPJSection[]
+
+  @@index([status])
+  @@index([periode])
+}
+
+model LPJSection {
+  id          String     @id @default(uuid())
+  lpj_id      String
+  judul       String
+  konten      String     @db.Text
+  urutan      Int
+  lpj         LaporanLPJ @relation(fields: [lpj_id], references: [id], onDelete: Cascade)
+}
+

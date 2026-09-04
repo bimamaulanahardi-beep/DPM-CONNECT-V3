@@ -30,11 +30,19 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ error: 'Invalid vote option' }, { status: 400 });
     }
 
-    // TODO: Issue #4 - Prevent duplicate votes.
-    // Currently, there is no VoteRecord model in Prisma schema to track if a user has already voted.
-    // To fully implement duplicate vote prevention, a VoteRecord model needs to be added to the schema.
-    // For now, we only validate that the session user exists (done above).
+    // Periksa apakah user sudah pernah mem-vote sebelumnya
+    const existingVote = await prisma.voteRecord.findUnique({
+      where: {
+        voting_id_user_nim: {
+          voting_id: id,
+          user_nim: user.nim,
+        }
+      }
+    });
 
+    if (existingVote) {
+      return NextResponse.json({ error: 'Anda sudah menyalurkan suara pada voting ini.' }, { status: 403 });
+    }
 
     const existing = await prisma.voting.findUnique({
       where: { id },
@@ -48,6 +56,7 @@ export async function POST(request: Request, { params }: Params) {
       return NextResponse.json({ error: 'Voting session is not active' }, { status: 400 });
     }
 
+    // Transaksi agar update jumlah dan insert record dilakukan bersamaan
     const dataToUpdate: any = {};
     if (pilihan === 'setuju') {
       dataToUpdate.hasil_setuju = { increment: 1 };
@@ -58,22 +67,30 @@ export async function POST(request: Request, { params }: Params) {
     }
     dataToUpdate.hasil_total = { increment: 1 };
 
-    const updated = await prisma.voting.update({
-      where: { id },
-      data: dataToUpdate,
-    });
-
-    // Record to AuditLog
-    await prisma.auditLog.create({
-      data: {
-        user: session.user?.name || 'Anggota DPM',
-        aksi: 'Menyalurkan hak suara',
-        modul: 'Voting',
-        detail: `Memilih "${pilihan}" pada voting: "${updated.judul}" (ID: ${id})`,
-        ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
-        tanggal: new Date().toISOString(),
-      },
-    });
+    const [updated, newRecord] = await prisma.$transaction([
+      prisma.voting.update({
+        where: { id },
+        data: dataToUpdate,
+      }),
+      prisma.voteRecord.create({
+        data: {
+          voting_id: id,
+          user_nim: user.nim,
+          pilihan: null, // Rahasiakan pilihan spesifik per user untuk privasi E-Voting
+          tanggal: new Date().toISOString(),
+        }
+      }),
+      prisma.auditLog.create({
+        data: {
+          user: session.user?.name || 'Anggota DPM',
+          aksi: 'Menyalurkan hak suara',
+          modul: 'Voting',
+          detail: `Berpartisipasi pada voting: "${existing.judul}" (ID: ${id})`,
+          ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
+          tanggal: new Date().toISOString(),
+        },
+      })
+    ]);
 
     const formattedVoting = {
       id: updated.id,

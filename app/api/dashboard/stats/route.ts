@@ -125,6 +125,16 @@ export async function GET(request: Request) {
       kehadiranSidangData.push({ bulan: bulanStr, persentase, jumlah_sidang });
     }
 
+    // 5. Chart Data: Status Program Kerja BEM (Pie Chart)
+    const prokerStatusDataRaw = await prisma.programKerjaBEM.groupBy({
+      by: ['status'],
+      _count: { status: true }
+    });
+    const prokerStatusData = prokerStatusDataRaw.map(item => ({
+      name: item.status.charAt(0).toUpperCase() + item.status.slice(1),
+      value: item._count.status
+    }));
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -140,6 +150,7 @@ export async function GET(request: Request) {
       recentAspirasi,
       aspirasiBulanData,
       kehadiranSidangData,
+      prokerStatusData,
     });
   } catch (error: any) {
     console.error('Error fetching dashboard stats:', error);

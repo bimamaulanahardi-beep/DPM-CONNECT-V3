@@ -95,6 +95,57 @@ export async function POST(request: Request) {
       link: `/dashboard/aspirasi/${id}`,
     });
 
+    // Kirim Email ke Admin DPM
+    try {
+      const { sendEmail } = await import('@/lib/mailer');
+      await sendEmail({
+        to: process.env.EMAIL_USER || 'dpmitbriau@gmail.com',
+        subject: `[Aspirasi Baru] ${judul}`,
+        html: `
+          <h2>Aspirasi Mahasiswa Baru</h2>
+          <p><strong>Pengaju:</strong> ${is_anonim ? 'Anonim' : (nama_pengaju || 'Anonim')}</p>
+          <p><strong>Kategori:</strong> ${kategori}</p>
+          <p><strong>Judul:</strong> ${judul}</p>
+          <p><strong>Isi Aspirasi:</strong><br/>${deskripsi}</p>
+          <br/>
+          <a href="${process.env.NEXTAUTH_URL}/dashboard/aspirasi/${id}" style="background-color: #f59e0b; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Buka Dashboard DPM</a>
+        `
+      });
+
+      // Kirim Email ke Pengaju (Jika tidak anonim & punya email)
+      if (!is_anonim && email_pengaju) {
+        await sendEmail({
+          to: email_pengaju,
+          subject: `[DPM ITB Riau] Tanda Terima Aspirasi`,
+          html: `
+            <h2>Aspirasi Berhasil Dikirim</h2>
+            <p>Halo ${nama_pengaju},</p>
+            <p>Aspirasi Anda berjudul <strong>"${judul}"</strong> telah kami terima di DPM ITB Riau.</p>
+            <p><strong>Kode Pelacakan Anda:</strong> ${kode_tracking}</p>
+            <p>Anda bisa melacak status aspirasi ini melalui portal atau dashboard mahasiswa Anda.</p>
+            <br/>
+            <p>Salam,<br/>DPM ITB Riau</p>
+          `
+        });
+      }
+    } catch (e) {
+      console.error('Email sending failed for aspirasi, but continuing...', e);
+    }
+
+    // Kirim Notifikasi WhatsApp ke Pengurus DPM
+    const adminWA = process.env.ADMIN_WHATSAPP;
+    if (adminWA) {
+      try {
+        const { sendWhatsApp } = await import('@/lib/whatsapp');
+        await sendWhatsApp({
+          to: adminWA,
+          message: `*DPM CONNECT — Aspirasi Mahasiswa Baru*\n\nTerdapat aspirasi baru masuk:\n• *Judul:* ${judul}\n• *Kategori:* ${kategori}\n• *Dari:* ${is_anonim ? 'Anonim' : (nama_pengaju || 'Tidak diketahui')}\n• *Kode Lacak:* ${kode_tracking}\n\nSilakan buka dashboard DPM untuk meninjau dan merespons aspirasi ini.`
+        });
+      } catch (e) {
+        console.error('WA Admin aspirasi error:', e);
+      }
+    }
+
     return NextResponse.json(newAspirasi, { status: 201 });
   } catch (error: any) {
     console.error('Error creating aspirasi:', error);

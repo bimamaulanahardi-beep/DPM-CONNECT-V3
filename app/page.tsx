@@ -17,7 +17,8 @@ import {
   CalendarDays,
   Menu,
   X,
-  FileText
+  FileText,
+  CalendarCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -123,14 +124,17 @@ export default function LandingPage() {
             <Link href="/aspirasi/lacak" className="text-slate-300 hover:text-amber-400 transition-colors">
               Lacak Aspirasi
             </Link>
+            <Link href="/lpj" className="text-slate-300 hover:text-amber-400 transition-colors">
+              Laporan LPJ
+            </Link>
+            <Link href="/pemira" className="flex items-center gap-1.5 text-amber-400 hover:text-amber-300 font-bold transition-colors">
+              <Vote className="w-4 h-4" /> E-Voting Pemira
+            </Link>
           </nav>
 
           <div className="hidden md:flex items-center gap-4">
-            <Button asChild variant="ghost" className="text-slate-300 hover:text-white hover:bg-slate-900">
-              <Link href="/login">Portal Anggota</Link>
-            </Button>
             <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-semibold shadow-lg shadow-amber-500/20">
-              <Link href="/aspirasi">Aspirasi Sekarang</Link>
+              <Link href="/login">Portal Anggota</Link>
             </Button>
           </div>
 
@@ -171,12 +175,23 @@ export default function LandingPage() {
             >
               Lacak Aspirasi
             </Link>
+            <Link 
+              href="/lpj" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-slate-300 hover:text-amber-400 py-2 border-b border-slate-900"
+            >
+              Laporan LPJ
+            </Link>
+            <Link 
+              href="/pemira" 
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 text-amber-400 font-bold py-2 border-b border-slate-900"
+            >
+              <Vote className="w-4 h-4" /> E-Voting Pemira
+            </Link>
             <div className="flex flex-col gap-3 pt-4">
-              <Button asChild variant="outline" className="border-slate-800 text-slate-300 hover:text-white bg-slate-900">
-                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Portal Anggota</Link>
-              </Button>
               <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-semibold w-full">
-                <Link href="/aspirasi" onClick={() => setMobileMenuOpen(false)}>Aspirasi Sekarang</Link>
+                <Link href="/login" onClick={() => setMobileMenuOpen(false)}>Portal Anggota</Link>
               </Button>
             </div>
           </motion.div>
@@ -197,7 +212,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs text-amber-400 font-semibold tracking-wide mb-6"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            PLATFORM PARLEMEN MAHASISWA MODERN
+            PLATFORM PARLEMEN MAHASISWA MODERN V2.0
           </motion.div>
 
           <motion.h1
@@ -225,16 +240,16 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.3 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-4"
           >
+            <Button asChild size="lg" className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold px-8 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-300 border border-blue-400/20">
+              <Link href="/pemira" className="flex items-center gap-2">
+                <Vote className="w-5 h-5" /> Masuk Bilik Suara Pemira
+              </Link>
+            </Button>
             <Button asChild size="lg" className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold px-8 shadow-lg shadow-amber-500/20 hover:shadow-amber-500/30 transition-all duration-300">
               <Link href="/aspirasi" className="flex items-center gap-2">
                 Aspirasikan Suaramu <ArrowRight className="w-4 h-4" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="w-full sm:w-auto border-slate-800 text-slate-300 hover:text-white bg-slate-950/50 hover:bg-slate-900 hover:border-slate-700 px-8">
-              <Link href="/transparansi" className="flex items-center gap-2">
-                Buka Portal Transparansi <Search className="w-4 h-4" />
               </Link>
             </Button>
           </motion.div>
@@ -389,6 +404,8 @@ export default function LandingPage() {
                 <li><Link href="/transparansi" className="hover:text-amber-400 transition-colors">Transparansi Publik</Link></li>
                 <li><Link href="/aspirasi" className="hover:text-amber-400 transition-colors">Kirim Aspirasi</Link></li>
                 <li><Link href="/aspirasi/lacak" className="hover:text-amber-400 transition-colors">Lacak Status</Link></li>
+                <li><Link href="/lpj" className="hover:text-amber-400 transition-colors">Laporan LPJ</Link></li>
+                <li><Link href="/pemira" className="hover:text-amber-400 transition-colors">E-Voting Pemira</Link></li>
               </ul>
             </div>
 
@@ -405,7 +422,7 @@ export default function LandingPage() {
           <div className="border-t border-slate-900 pt-8 flex flex-col items-center justify-between gap-2 sm:flex-row text-xs">
             <p>&copy; {new Date().getFullYear()} DPM ITB Riau. All rights reserved.</p>
             <div className="text-center sm:text-right">
-              <p className="text-slate-600">Built with Next.js 14 & Tailwind CSS</p>
+              <p className="text-slate-600">Built with Next.js 14 & Tailwind CSS - Version 2.0</p>
               <p className="text-slate-500 mt-1">By : Bima Maulana Hardi</p>
             </div>
           </div>

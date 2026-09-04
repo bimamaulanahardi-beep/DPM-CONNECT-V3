@@ -30,7 +30,11 @@ import {
   Search,
   CheckCircle,
   HelpCircle,
-  Loader2
+  Loader2,
+  CalendarDays,
+  CalendarCheck,
+  BarChart3,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +46,7 @@ interface NavItem {
   href: string;
   icon: React.ComponentType<any>;
   roles: string[]; // Allowed roles: pimpinan, ketua_komisi, anggota, mahasiswa
+  komisi?: string[]; // Jika diisi, ketua_komisi & anggota hanya bisa akses jika komisi cocok
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -59,9 +64,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Authentication check
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.replace('/login');
+      router.replace(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
     }
-  }, [status, router]);
+  }, [status, router, pathname]);
 
   // Fetch real notifications
   useEffect(() => {
@@ -102,9 +107,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const navItems: NavItem[] = [
     { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'mahasiswa'] },
     { label: 'Sidang DPM', href: '/dashboard/sidang', icon: BookOpen, roles: ['pimpinan', 'ketua_komisi', 'anggota'] },
+    { label: 'Kalender Kegiatan', href: '/dashboard/kalender', icon: CalendarDays, roles: ['pimpinan', 'ketua_komisi', 'anggota'] },
     { label: 'Legislasi / RUU', href: '/dashboard/legislasi', icon: Scale, roles: ['pimpinan', 'ketua_komisi', 'anggota'] },
     { label: 'Sesi Voting', href: '/dashboard/voting', icon: Vote, roles: ['pimpinan', 'ketua_komisi', 'anggota'] },
+    { label: 'Pemilu Raya', href: '/dashboard/pemira', icon: Vote, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'mahasiswa', 'bem'] },
     { label: 'Pengawasan BEM', href: '/dashboard/pengawasan', icon: ShieldCheck, roles: ['pimpinan', 'ketua_komisi', 'anggota', 'bem'] },
+    { label: 'Perizinan Kegiatan', href: '/dashboard/izin', icon: CalendarCheck, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'bem'], komisi: ['Komisi II'] },
+    { label: 'Referendum Kampus', href: '/dashboard/referendum', icon: BarChart3, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'mahasiswa', 'bem'], komisi: ['Komisi I'] },
+    { label: 'Laporan LPJ', href: '/dashboard/lpj', icon: FileSpreadsheet, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'bem'] },
     { label: 'Aspirasi Masuk', href: '/dashboard/aspirasi', icon: MessageSquareText, roles: ['pimpinan', 'ketua_komisi', 'anggota'] },
     { label: 'Daftar Anggota', href: '/dashboard/anggota', icon: Users2, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'mahasiswa'] },
     { label: 'Surat Menyurat', href: '/dashboard/surat', icon: Mail, roles: ['pimpinan', 'ketua_komisi', 'anggota'] },
@@ -113,8 +123,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { label: 'Pengaturan', href: '/dashboard/pengaturan', icon: Settings, roles: ['admin', 'pimpinan', 'ketua_komisi', 'anggota', 'mahasiswa', 'bem'] },
   ];
 
-  // Filter navigation by user role
-  const filteredNavItems = navItems.filter((item) => item.roles.includes(userRole));
+  // Filter navigasi: cek role + komisi (jika item punya batasan komisi)
+  const userKomisi = user.komisi || '';
+  const filteredNavItems = navItems.filter((item) => {
+    if (!item.roles.includes(userRole)) return false;
+    // Jika item punya batasan komisi, hanya pimpinan/admin yang bypass; ketua_komisi/anggota harus cocok
+    if (item.komisi && item.komisi.length > 0) {
+      if (userRole === 'admin' || userRole === 'pimpinan') return true;
+      return item.komisi.includes(userKomisi);
+    }
+    return true;
+  });
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' });

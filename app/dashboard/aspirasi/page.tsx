@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { ExportButtons } from '@/components/common/export-buttons';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -108,7 +109,19 @@ export default function AspirasiListPage() {
               : 'Daftar keluhan, usulan, dan aspirasi yang dikirimkan oleh mahasiswa ITB Riau.'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <ExportButtons 
+            data={filteredAspirasi} 
+            filename="Laporan_Aspirasi_Mahasiswa" 
+            columns={[
+              { header: 'Kode', dataKey: 'kode_tracking' },
+              { header: 'Kategori', dataKey: 'kategori' },
+              { header: 'Tanggal Masuk', dataKey: 'tanggal_masuk' },
+              { header: 'Pengaju', dataKey: 'nama_pengaju' },
+              { header: 'Judul', dataKey: 'judul' },
+              { header: 'Status', dataKey: 'status' }
+            ]} 
+          />
           <Button 
             onClick={fetchAspirasi} 
             variant="outline" 

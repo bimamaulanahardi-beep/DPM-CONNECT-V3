@@ -43,40 +43,84 @@ export async function POST(request: Request) {
       }
 
       const originalName = (file as any).name || `surat-masuk-${Date.now()}.pdf`;
-      const fileId = `${Date.now()}-${crypto.randomUUID().split('-')[0]}`;
-      const base64Data = buffer.toString('base64');
-      const dataUri = `data:${file.type};base64,${base64Data}`;
+      const uniqueFileName = `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
-      // Store file in FileStorage
-      await prisma.fileStorage.create({
-        data: {
-          fileId,
-          filename: originalName,
-          mimeType: file.type,
-          sizeBytes: buffer.length,
-          dataUri,
-          uploadedBy: `Publik: ${nama_pengirim}`,
-          tanggal: new Date().toISOString(),
+      // Upload ke Supabase
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+      
+      if (supabaseUrl && supabaseKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const { error: uploadError } = await supabase
+          .storage
+          .from('uploads')
+          .upload(uniqueFileName, buffer, {
+            contentType: file.type,
+            upsert: false
+          });
+
+        if (uploadError) {
+          console.error('Supabase upload error:', uploadError);
+          return NextResponse.json({ error: 'Gagal mengupload lampiran ke penyimpanan cloud.' }, { status: 500 });
         }
-      });
 
-      // Record lightweight audit log
-      await prisma.auditLog.create({
-        data: {
-          user: `Publik: ${nama_pengirim}`,
-          aksi: 'Mengunggah berkas lampiran',
-          modul: 'Penyimpanan',
-          detail: `Mengunggah lampiran surat ${originalName} (${fileId})`,
-          ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
-          tanggal: new Date().toISOString(),
-        },
-      });
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('uploads')
+          .getPublicUrl(uniqueFileName);
 
-      lampiranList = [{ 
-        name: originalName, 
-        url: `/api/file/${fileId}?name=${encodeURIComponent(originalName)}`,
-        fileId
-      }];
+        await prisma.auditLog.create({
+          data: {
+            user: `Publik: ${nama_pengirim}`,
+            aksi: 'Mengunggah berkas lampiran',
+            modul: 'Penyimpanan',
+            detail: `Mengunggah lampiran surat ke Supabase: ${originalName}`,
+            ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
+            tanggal: new Date().toISOString(),
+          },
+        });
+
+        lampiranList = [{ 
+          name: originalName, 
+          url: publicUrl
+        }];
+      } else {
+        // Fallback: simpan di FileStorage Base64
+        const fileId = `${Date.now()}-${crypto.randomUUID().split('-')[0]}`;
+        const base64Data = buffer.toString('base64');
+        const dataUri = `data:${file.type};base64,${base64Data}`;
+
+        await prisma.fileStorage.create({
+          data: {
+            fileId,
+            filename: originalName,
+            mimeType: file.type,
+            sizeBytes: buffer.length,
+            dataUri,
+            uploadedBy: `Publik: ${nama_pengirim}`,
+            tanggal: new Date().toISOString(),
+          }
+        });
+
+        await prisma.auditLog.create({
+          data: {
+            user: `Publik: ${nama_pengirim}`,
+            aksi: 'Mengunggah berkas lampiran',
+            modul: 'Penyimpanan',
+            detail: `Mengunggah lampiran surat ${originalName} (${fileId})`,
+            ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
+            tanggal: new Date().toISOString(),
+          },
+        });
+
+        lampiranList = [{ 
+          name: originalName, 
+          url: `/api/file/${fileId}?name=${encodeURIComponent(originalName)}`,
+          fileId
+        }];
+      }
     }
 
     const id = `SRT-${crypto.randomUUID().split('-')[0].toUpperCase()}`;
@@ -119,6 +163,56 @@ export async function POST(request: Request) {
       jenis: 'surat',
       link: `/dashboard/surat`,
     });
+
+    // Kirim Notifikasi Email ke Admin DPM
+    try {
+      const { sendEmail } = await import('@/lib/mailer');
+      await sendEmail({
+        to: process.env.EMAIL_USER || 'dpmitbriau@gmail.com',
+        subject: `[Surat Masuk Baru] ${perihal}`,
+        html: `
+          <h2>Ada Surat Masuk Baru!</h2>
+          <p><strong>Dari:</strong> ${nama_pengirim} (${instansi})</p>
+          <p><strong>Email Pengirim:</strong> ${email_pengirim || '-'}</p>
+          <p><strong>Perihal:</strong> ${perihal}</p>
+          <p><strong>Isi Ringkas:</strong><br/>${isi_singkat}</p>
+          <br/>
+          <a href="${process.env.NEXTAUTH_URL}/dashboard/surat" style="background-color: #f59e0b; color: #fff; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Buka Dashboard DPM</a>
+        `
+      });
+
+      // Kirim Notifikasi Email ke Pengirim (jika ada email)
+      if (email_pengirim) {
+        await sendEmail({
+          to: email_pengirim,
+          subject: `[DPM ITB Riau] Bukti Tanda Terima Surat`,
+          html: `
+            <h2>Surat Berhasil Diterima</h2>
+            <p>Halo ${nama_pengirim},</p>
+            <p>Terima kasih telah mengirimkan surat ke DPM ITB Riau. Surat Anda dengan perihal <strong>"${perihal}"</strong> telah kami terima di dalam sistem dan akan segera kami proses.</p>
+            <p><strong>Kode Pelacakan Anda:</strong> ${id}</p>
+            <br/>
+            <p>Salam,<br/>DPM ITB Riau</p>
+          `
+        });
+      }
+    } catch (e) {
+      console.error('Email sending failed, but continuing...', e);
+    }
+
+    // Kirim Notifikasi WhatsApp ke Pengurus DPM
+    const adminWA = process.env.ADMIN_WHATSAPP;
+    if (adminWA) {
+      try {
+        const { sendWhatsApp } = await import('@/lib/whatsapp');
+        await sendWhatsApp({
+          to: adminWA,
+          message: `*DPM CONNECT — Surat Masuk Baru*\n\nTerdapat surat masuk baru:\n• *Dari:* ${nama_pengirim} (${instansi})\n• *Perihal:* ${perihal}\n• *Tanggal:* ${tanggal || new Date().toISOString().split('T')[0]}\n• *ID Surat:* ${id}\n\nSilakan buka dashboard DPM untuk mendisposisikan surat.`
+        });
+      } catch (e) {
+        console.error('WA Admin surat error:', e);
+      }
+    }
 
     return NextResponse.json({
       success: true,

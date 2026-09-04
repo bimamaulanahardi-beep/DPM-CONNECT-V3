@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
+import { ExportButtons } from '@/components/common/export-buttons';
 import { formatDate } from '@/lib/utils';
 
 export default function SidangListPage() {
@@ -67,7 +68,20 @@ export default function SidangListPage() {
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-wide">Jadwal & Hasil Sidang</h1>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">Daftar sidang paripurna, sidang komisi, dan rapat dengar pendapat DPM.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <ExportButtons 
+            data={filteredSidang} 
+            filename="Laporan_Sidang_DPM" 
+            columns={[
+              { header: 'ID', dataKey: 'id' },
+              { header: 'Judul', dataKey: 'judul' },
+              { header: 'Jenis', dataKey: 'jenis' },
+              { header: 'Komisi', dataKey: 'komisi' },
+              { header: 'Tanggal', dataKey: 'tanggal' },
+              { header: 'Lokasi', dataKey: 'lokasi' },
+              { header: 'Status', dataKey: 'status' }
+            ]} 
+          />
           <Button 
             onClick={fetchSidang} 
             variant="outline" 
@@ -77,7 +91,7 @@ export default function SidangListPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Segarkan
           </Button>
-          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0">
+          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0 h-10">
             <Link href="/dashboard/sidang/baru" className="flex items-center">
               <Plus className="w-4 h-4 mr-1.5" /> Buat Sidang Baru
             </Link>

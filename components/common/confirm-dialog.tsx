@@ -22,6 +22,7 @@ interface ConfirmDialogProps {
   confirmText?: string;
   cancelText?: string;
   isLoading?: boolean;
+  actionVariant?: 'danger' | 'primary' | 'warning';
 }
 
 export function ConfirmDialog({
@@ -33,7 +34,19 @@ export function ConfirmDialog({
   confirmText = 'Hapus',
   cancelText = 'Batal',
   isLoading = false,
+  actionVariant = 'danger',
 }: ConfirmDialogProps) {
+  
+  const getActionClass = () => {
+    switch (actionVariant) {
+      case 'primary': return 'bg-blue-600 text-white hover:bg-blue-700 font-bold';
+      case 'warning': return 'bg-amber-600 text-white hover:bg-amber-700 font-bold';
+      case 'danger': 
+      default:
+        return 'bg-red-600 text-white hover:bg-red-700 font-bold';
+    }
+  };
+
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
       <AlertDialogContent className="bg-slate-900 border border-slate-800 text-white">
@@ -56,7 +69,7 @@ export function ConfirmDialog({
               onConfirm();
             }}
             disabled={isLoading}
-            className="bg-red-600 text-white hover:bg-red-700 font-bold"
+            className={getActionClass()}
           >
             {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {confirmText}

@@ -16,13 +16,15 @@ import {
   ExternalLink,
   Copy,
   CheckCheck,
-  RefreshCw
+  RefreshCw,
+  Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { ExportButtons } from '@/components/common/export-buttons';
 import { formatDate } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -109,6 +111,19 @@ export default function SuratListPage() {
           <p className="text-xs sm:text-sm text-slate-400 mt-1">Daftar arsip korespondensi surat masuk dan surat keluar resmi DPM.</p>
         </div>
         <div className="flex gap-2">
+          <ExportButtons 
+            data={filteredSurat} 
+            filename="Laporan_Surat_DPM" 
+            columns={[
+              { header: 'No. Surat', dataKey: 'nomor' },
+              { header: 'Jenis', dataKey: 'jenis' },
+              { header: 'Tanggal', dataKey: 'tanggal' },
+              { header: 'Dari', dataKey: 'dari' },
+              { header: 'Kepada', dataKey: 'kepada' },
+              { header: 'Perihal', dataKey: 'perihal' },
+              { header: 'Status', dataKey: 'status' }
+            ]} 
+          />
           <Button 
             onClick={fetchSurat} 
             variant="outline" 
@@ -118,7 +133,7 @@ export default function SuratListPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Segarkan
           </Button>
-          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0">
+          <Button asChild className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold shrink-0 h-10">
             <Link href="/dashboard/surat/baru" className="flex items-center">
               <Plus className="w-4 h-4 mr-1.5" /> Buat Surat Keluar
             </Link>
@@ -241,6 +256,19 @@ export default function SuratListPage() {
                     {deletingId === surat.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                   </Button>
                 )}
+                
+                {/* Cetak PDF Otomatis (E-Office V2.0) */}
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 h-8 px-4 flex items-center gap-1.5 shadow-sm"
+                >
+                  <Link href={`/dashboard/surat/cetak/${surat.id}`}>
+                    <Printer className="w-3.5 h-3.5" /> Cetak PDF
+                  </Link>
+                </Button>
+
                 {(surat.lampiran && surat.lampiran.length > 0) ? (
                   surat.lampiran.map((lamp: any, idx: number) => {
                     const fileName = lamp.name || lamp.url?.split('/').pop() || `surat-${surat.id}.pdf`;
@@ -254,13 +282,13 @@ export default function SuratListPage() {
                         className="text-amber-500 hover:text-amber-400 hover:bg-slate-900 border border-slate-800 hover:border-slate-800 font-bold text-xs h-8 px-4 flex items-center gap-1.5"
                       >
                         <a href={downloadUrl} download={fileName} target="_blank" rel="noopener noreferrer">
-                          <Download className="w-3.5 h-3.5" /> Unduh PDF
+                          <Download className="w-3.5 h-3.5" /> Lampiran
                         </a>
                       </Button>
                     );
                   })
                 ) : (
-                  <span className="text-[10px] text-slate-600 italic px-2">Tidak ada lampiran</span>
+                  <span className="text-[10px] text-slate-600 italic px-2 hidden lg:inline">Tidak ada lampiran</span>
                 )}
               </div>
             </div>

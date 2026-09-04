@@ -79,6 +79,7 @@ export async function POST(request: Request) {
         tanggal: tanggal || new Date().toISOString().split('T')[0],
         isi_singkat: isi_singkat || '',
         lampiran: lampiran ? JSON.stringify(lampiran) : null,
+        tanda_tangan: body.tanda_tangan || null,
         disposisi_kepada: disposisi_kepada || null,
         disposisi_catatan: disposisi_catatan || null,
         created_by: created_by || '1',

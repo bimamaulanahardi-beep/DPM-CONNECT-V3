@@ -49,6 +49,7 @@ export default function VotingDetailPage({ params }: PageProps) {
       if (voteRes.ok) {
         setVote(voteData);
         setResults(voteData.hasil);
+        setHasVoted(voteData.has_voted || false); // Sinkronisasi dengan database backend
         
         if (voteData.sidang_id) {
           const sidangRes = await fetch(`/api/sidang/${voteData.sidang_id}`);
