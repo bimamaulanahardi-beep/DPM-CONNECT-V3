@@ -177,7 +177,7 @@ export default function CetakSuratPage({ params }: PageProps) {
           <div className="mt-20 pt-4 border-t border-slate-300 flex items-center justify-between text-[11px] text-slate-500">
             <div className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Dokumen ini dicetak otomatis dari Sistem E-Office DPM Connect V2.0</span>
+              <span>Dokumen ini dicetak otomatis dari Sistem E-Office DPM Connect V3.0</span>
             </div>
             <div>
               ID Arsip: {surat.id.substring(0, 8).toUpperCase()}

@@ -212,7 +212,7 @@ export default function LandingPage() {
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800 text-xs text-amber-400 font-semibold tracking-wide mb-6"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
-            PLATFORM PARLEMEN MAHASISWA MODERN V2.0
+            PLATFORM PARLEMEN MAHASISWA MODERN V3.0
           </motion.div>
 
           <motion.h1
@@ -422,8 +422,8 @@ export default function LandingPage() {
           <div className="border-t border-slate-900 pt-8 flex flex-col items-center justify-between gap-2 sm:flex-row text-xs">
             <p>&copy; {new Date().getFullYear()} DPM ITB Riau. All rights reserved.</p>
             <div className="text-center sm:text-right">
-              <p className="text-slate-600">Built with Next.js 14 & Tailwind CSS - Version 2.0</p>
-              <p className="text-slate-500 mt-1">By : Bima Maulana Hardi</p>
+              <p className="text-slate-600">Built with Next.js 14 & Tailwind CSS - Version 3.0</p>
+              <p className="text-slate-500 mt-1">By : ZeroniX Digital Studio</p>
             </div>
           </div>
         </div>
