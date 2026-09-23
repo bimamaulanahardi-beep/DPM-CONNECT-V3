@@ -183,14 +183,6 @@ function LoginForm() {
             </Button>
           </form>
 
-          {/* Quick reference for demo */}
-          <div className="mt-8 pt-6 border-t border-slate-800 text-center">
-            <h4 className="text-xs font-semibold text-slate-400 mb-2">Akun Demo Instan</h4>
-            <div className="text-[11px] text-slate-500 flex justify-center gap-4 flex-wrap">
-              <span><strong>Ketua DPM</strong>: 2021001001 / pimpinan123</span>
-              <span><strong>Komisi I</strong>: 2021002001 / ketua123</span>
-            </div>
-          </div>
         </motion.div>
       </div>
     </div>
