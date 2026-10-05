@@ -8,7 +8,7 @@ import { sendWhatsApp } from '@/lib/whatsapp';
 /**
  * Endpoint tes WhatsApp (khusus admin/pimpinan).
  * Buka di browser setelah login: /api/admin/test-wa
- * Opsional: /api/admin/test-wa?to=628xxxxxxxxxx
+ * Opsional: ?to=group | ?to=admin | ?to=628xxxxxxxxxx
  */
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
@@ -19,7 +19,14 @@ export async function GET(req: Request) {
   }
 
   const { searchParams } = new URL(req.url);
-  const to = searchParams.get('to') || process.env.ADMIN_WHATSAPP || '';
+  const toParam = searchParams.get('to');
+  // Default: kirim ke grup jika WA_GROUP_ID terisi, selain itu ke ADMIN_WHATSAPP
+  const to =
+    toParam === 'group' || (!toParam && process.env.WA_GROUP_ID)
+      ? process.env.WA_GROUP_ID || ''
+      : toParam === 'admin' || !toParam
+        ? process.env.ADMIN_WHATSAPP || ''
+        : toParam;
 
   const result = await sendWhatsApp({
     to,
