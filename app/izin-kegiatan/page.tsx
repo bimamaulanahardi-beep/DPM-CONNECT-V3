@@ -30,6 +30,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { TimeInput24 } from '@/components/common/time-input-24';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatusBadge } from '@/components/common/status-badge';
 
@@ -414,12 +415,9 @@ export default function IzinKegiatanPage() {
                         <label className="text-xs font-semibold text-slate-300 block mb-1.5">
                           Waktu Mulai <span className="text-red-400">*</span>
                         </label>
-                        <Input
-                          type="time"
-                          name="waktu_mulai"
+                        <TimeInput24
                           value={formData.waktu_mulai}
-                          onChange={handleInputChange}
-                          className="bg-slate-950/60 border-slate-800 text-white focus:border-gold-500"
+                          onChange={(val) => setFormData(prev => ({ ...prev, waktu_mulai: val }))}
                           required
                         />
                       </div>
@@ -428,12 +426,9 @@ export default function IzinKegiatanPage() {
                         <label className="text-xs font-semibold text-slate-300 block mb-1.5">
                           Waktu Selesai
                         </label>
-                        <Input
-                          type="time"
-                          name="waktu_selesai"
+                        <TimeInput24
                           value={formData.waktu_selesai}
-                          onChange={handleInputChange}
-                          className="bg-slate-950/60 border-slate-800 text-white focus:border-gold-500"
+                          onChange={(val) => setFormData(prev => ({ ...prev, waktu_selesai: val }))}
                         />
                       </div>
 

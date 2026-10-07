@@ -22,20 +22,24 @@ export function formatDateShort(date: string | Date): string {
 }
 
 export function formatTime(date: string | Date): string {
-  return new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes} WIB`;
 }
 
 export function formatDateTime(date: string | Date): string {
-  return new Intl.DateTimeFormat('id-ID', {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  const formattedDate = new Intl.DateTimeFormat('id-ID', {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(date));
+  }).format(d);
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${formattedDate}, ${hours}:${minutes} WIB`;
 }
 
 export function truncate(str: string, length: number): string {

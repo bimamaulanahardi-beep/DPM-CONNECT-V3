@@ -321,7 +321,7 @@ export default function TransparansiPage() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-slate-500" />
-                        <span>{item.waktu_mulai} {item.waktu_selesai ? ` - ${item.waktu_selesai}` : ' WIB'}</span>
+                        <span>{item.waktu_mulai}{item.waktu_selesai ? ` - ${item.waktu_selesai}` : ''} WIB</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-slate-500" />

@@ -390,7 +390,7 @@ export default function SidangDetailPage({ params }: PageProps) {
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-slate-500" />
-                <span>{sidang.waktu_mulai} {sidang.waktu_selesai ? ` - ${sidang.waktu_selesai}` : ' WIB'}</span>
+                <span>{sidang.waktu_mulai}{sidang.waktu_selesai ? ` - ${sidang.waktu_selesai}` : ''} WIB</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-slate-500" />

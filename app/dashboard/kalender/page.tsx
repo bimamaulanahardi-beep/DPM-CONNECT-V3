@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/common/status-badge';
+import { TimeInput24 } from '@/components/common/time-input-24';
 import { useToast } from '@/hooks/use-toast';
 
 const DAYS = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
@@ -69,7 +70,7 @@ export default function KalenderPage() {
   const [formNama, setFormNama] = useState('');
   const [formKategori, setFormKategori] = useState('Rapat Kerja / Internal');
   const [formTanggal, setFormTanggal] = useState('');
-  const [formWaktuMulai, setFormWaktuMulai] = useState('');
+  const [formWaktuMulai, setFormWaktuMulai] = useState('09:00');
   const [formWaktuSelesai, setFormWaktuSelesai] = useState('');
   const [formLokasi, setFormLokasi] = useState('');
   const [formPJ, setFormPJ] = useState('');
@@ -149,7 +150,7 @@ export default function KalenderPage() {
       setFormNama('');
       setFormKategori('Rapat Kerja / Internal');
       setFormTanggal('');
-      setFormWaktuMulai('');
+      setFormWaktuMulai('09:00');
       setFormWaktuSelesai('');
       setFormLokasi('');
       setFormPJ('');
@@ -739,22 +740,18 @@ export default function KalenderPage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Mulai (WIB) *</Label>
-                      <Input
-                        type="time"
+                      <Label className="text-slate-300 font-semibold">Waktu Mulai *</Label>
+                      <TimeInput24
                         value={formWaktuMulai}
-                        onChange={e => setFormWaktuMulai(e.target.value)}
+                        onChange={setFormWaktuMulai}
                         required
-                        className="bg-slate-950/60 border-slate-800 text-white"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Selesai (Opsional)</Label>
-                      <Input
-                        type="time"
+                      <Label className="text-slate-300 font-semibold">Waktu Selesai (Opsional)</Label>
+                      <TimeInput24
                         value={formWaktuSelesai}
-                        onChange={e => setFormWaktuSelesai(e.target.value)}
-                        className="bg-slate-950/60 border-slate-800 text-white"
+                        onChange={setFormWaktuSelesai}
                       />
                     </div>
                   </div>

@@ -189,7 +189,7 @@ export default function SidangListPage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                      <span>{sidang.waktu_mulai} {sidang.waktu_selesai ? ` - ${sidang.waktu_selesai}` : ' WIB'}</span>
+                      <span>{sidang.waktu_mulai}{sidang.waktu_selesai ? ` - ${sidang.waktu_selesai}` : ''} WIB</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />

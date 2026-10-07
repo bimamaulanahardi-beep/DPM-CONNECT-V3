@@ -15,6 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { SidangJenis } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { TimeInput24 } from '@/components/common/time-input-24';
 
 export default function BaruSidangPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function BaruSidangPage() {
   const [judul, setJudul] = useState('');
   const [jenis, setJenis] = useState<SidangJenis>('komisi');
   const [tanggal, setTanggal] = useState('');
-  const [waktuMulai, setWaktuMulai] = useState('');
+  const [waktuMulai, setWaktuMulai] = useState('09:00');
   const [lokasi, setLokasi] = useState('');
   const [linkDaring, setLinkDaring] = useState('');
   const [komisi, setKomisi] = useState('Komisi I');
@@ -216,13 +217,10 @@ export default function BaruSidangPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="waktu" className="text-slate-350 font-semibold text-xs">Waktu Mulai *</Label>
-                <Input
+                <TimeInput24
                   id="waktu"
-                  type="time"
-                  placeholder="09:00"
                   value={waktuMulai}
-                  onChange={(e) => setWaktuMulai(e.target.value)}
-                  className="bg-slate-950/60 border-slate-800 text-white focus-visible:ring-amber-500 font-sans"
+                  onChange={setWaktuMulai}
                   required
                 />
               </div>
