@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, statusLabel } from '@/lib/notification';
 
 // Helper to check authorization
 async function checkAuth() {
@@ -118,9 +118,18 @@ export async function POST(req: Request) {
     // Create Notification
     await createInAppNotification({
       judul: 'Anggota Baru Bergabung',
-      pesan: `${name} telah bergabung dalam sistem dengan peran ${role}.`,
-      jenis: 'pengumuman',
+      pesan: `${name} telah bergabung dalam sistem dengan peran ${statusLabel(role)}.`,
+      jenis: 'anggota',
       link: `/dashboard/anggota`,
+      detail: {
+        Nama: name,
+        NIM: nim,
+        Peran: statusLabel(role),
+        Komisi: komisi,
+        Jabatan: jabatan,
+        Prodi: prodi,
+        Angkatan: angkatan,
+      },
     });
 
     return NextResponse.json({

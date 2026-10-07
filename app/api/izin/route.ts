@@ -77,6 +77,13 @@ export async function POST(request: Request) {
       pesan: `"${nama_kegiatan}" oleh ${penyelenggara} memerlukan tinjauan DPM.`,
       jenis: 'izin',
       link: `/dashboard/izin/${newIzin.id}`,
+      detail: {
+        Kode: kode,
+        'Penanggung Jawab': penanggung_jawab,
+        Jadwal: `${tanggal_mulai}${newIzin.waktu_mulai ? ` ${newIzin.waktu_mulai}` : ''}`,
+        Lokasi: lokasi,
+        'Estimasi Peserta': newIzin.estimasi_peserta,
+      },
     });
 
     // Kirim email konfirmasi jika ada email

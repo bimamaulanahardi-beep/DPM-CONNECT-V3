@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,13 +96,36 @@ export async function PUT(request: Request, { params }: Params) {
       },
     });
 
-    // Create Notification if disposisi changed
+    const suratDetail = {
+      Nomor: updated.nomor,
+      Jenis: statusLabel(updated.jenis),
+      Dari: updated.dari,
+      Kepada: updated.kepada,
+      Status: statusLabel(updated.status),
+    };
     if (existing.disposisi_kepada !== updated.disposisi_kepada && updated.disposisi_kepada) {
       await createInAppNotification({
         judul: 'Disposisi Surat Baru',
-        pesan: `Anda menerima disposisi surat masuk perihal "${updated.perihal}" dari ${updated.dari}.`,
+        pesan: `Surat perihal "${updated.perihal}" dari ${updated.dari} didisposisikan kepada ${updated.disposisi_kepada}.`,
         jenis: 'surat',
         link: `/dashboard/surat`,
+        detail: { ...suratDetail, 'Catatan Disposisi': updated.disposisi_catatan },
+      });
+    } else if (existing.status !== updated.status) {
+      await createInAppNotification({
+        judul: 'Status Surat Diperbarui',
+        pesan: `Status surat perihal "${updated.perihal}" berubah dari ${statusLabel(existing.status)} menjadi ${statusLabel(updated.status)}.`,
+        jenis: 'surat',
+        link: `/dashboard/surat`,
+        detail: suratDetail,
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Data Surat Diperbarui',
+        pesan: `Surat perihal "${updated.perihal}" telah diperbarui oleh ${session.user?.name || 'Anggota DPM'}.`,
+        jenis: 'surat',
+        link: `/dashboard/surat`,
+        detail: suratDetail,
       });
     }
 
@@ -146,6 +169,13 @@ export async function DELETE(request: Request, { params }: Params) {
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
+    });
+
+    await createInAppNotification({
+      judul: 'Surat Dihapus',
+      pesan: `Surat perihal "${existing.perihal}" telah dihapus oleh ${session.user?.name || 'Anggota DPM'}.`,
+      jenis: 'surat',
+      detail: { Nomor: existing.nomor, Jenis: statusLabel(existing.jenis), Dari: existing.dari },
     });
 
     return NextResponse.json({ message: 'Surat berhasil dihapus' });

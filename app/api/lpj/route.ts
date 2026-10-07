@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,12 +124,30 @@ export async function POST(request: Request) {
       }
     });
 
+    const lpjDetail = {
+      Lembaga: lembaga,
+      Periode: periode,
+      Ketua: ketua,
+      Status: statusLabel(newLPJ.status),
+      'Dibuat oleh': newLPJ.created_by,
+      Ringkasan: ringkas(ringkasan, 400),
+    };
+
     if (newLPJ.status === 'diterbitkan') {
       await createInAppNotification({
-        judul: '📊 LPJ Baru Diterbitkan',
+        judul: 'LPJ Baru Diterbitkan',
         pesan: `${lembaga} telah mempublikasikan LPJ periode ${periode}: "${judul}".`,
-        jenis: 'pengawasan',
+        jenis: 'lpj',
         link: `/lpj/${newLPJ.id}`,
+        detail: lpjDetail,
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Draft LPJ Baru Dibuat',
+        pesan: `Draft LPJ "${judul}" (${lembaga}, periode ${periode}) telah dibuat.`,
+        jenis: 'lpj',
+        link: `/dashboard/lpj/${newLPJ.id}`,
+        detail: lpjDetail,
       });
     }
 

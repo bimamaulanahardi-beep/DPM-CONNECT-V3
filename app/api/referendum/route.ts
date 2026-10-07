@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -133,12 +133,30 @@ export async function POST(request: Request) {
       },
     });
 
+    const refDetail = {
+      Pertanyaan: referendum.pertanyaan,
+      Opsi: validOpsi.join(' / '),
+      Pelaksanaan: `${tanggal_mulai} s.d ${tanggal_selesai}`,
+      Status: statusLabel(referendum.status),
+      'Dibuat oleh': referendum.created_by,
+      Deskripsi: ringkas(deskripsi, 400),
+    };
+
     if (referendum.status === 'aktif') {
       await createInAppNotification({
-        judul: '🗳️ Referendum Baru Dibuka',
+        judul: 'Referendum Baru Dibuka',
         pesan: `Referendum: "${judul}" telah dibuka untuk seluruh mahasiswa ITB Riau.`,
-        jenis: 'voting',
+        jenis: 'referendum',
         link: `/referendum`,
+        detail: refDetail,
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Draft Referendum Baru Dibuat',
+        pesan: `Draft Referendum "${judul}" telah dibuat.`,
+        jenis: 'referendum',
+        link: `/dashboard/referendum/${referendum.id}`,
+        detail: refDetail,
       });
     }
 

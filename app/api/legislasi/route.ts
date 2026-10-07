@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,6 +94,14 @@ export async function POST(request: Request) {
       pesan: `Draft "${judul}" telah diajukan dan menunggu pembahasan.`,
       jenis: 'legislasi',
       link: `/dashboard/legislasi/${id}`,
+      detail: {
+        Nomor: newLeg.nomor || '-',
+        Jenis: statusLabel(jenis),
+        Komisi: komisi,
+        Pengaju: pengaju,
+        Status: statusLabel(status),
+        Ringkasan: ringkas(isi_ringkasan, 400),
+      },
     });
 
     const formattedLeg = {

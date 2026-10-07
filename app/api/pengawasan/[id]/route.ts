@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,56 @@ export async function PUT(request: Request, { params }: Params) {
       },
     });
 
+    // Notifikasi grup WA
+    const statusBerubah = body.status !== undefined && existing.status !== updated.status;
+    const progressBerubah = body.progress_percentage !== undefined && existing.progress_percentage !== updated.progress_percentage;
+    const skorBerubah = body.skor_evaluasi !== undefined && existing.skor_evaluasi !== updated.skor_evaluasi;
+    const catatanDpmBerubah = body.catatan_dpm !== undefined && existing.catatan_dpm !== updated.catatan_dpm;
+
+    const prokerDetail = {
+      Divisi: updated.divisi,
+      'Penanggung Jawab': updated.penanggung_jawab,
+      Progress: `${updated.progress_percentage}%${progressBerubah ? ` (sebelumnya ${existing.progress_percentage}%)` : ''}`,
+      Status: statusLabel(updated.status),
+      'Skor Evaluasi': updated.skor_evaluasi !== null && updated.skor_evaluasi !== undefined ? `${updated.skor_evaluasi} / 100` : undefined,
+      'Catatan DPM': updated.catatan_dpm ? ringkas(updated.catatan_dpm, 400) : undefined,
+      'Diperbarui oleh': session.user?.name || 'Anggota DPM',
+    };
+
+    if (statusBerubah) {
+      await createInAppNotification({
+        judul: 'Status Proker BEM Diperbarui',
+        pesan: `Status proker "${updated.nama}" (${updated.divisi}) berubah menjadi ${statusLabel(updated.status)}.`,
+        jenis: 'pengawasan',
+        link: `/dashboard/pengawasan`,
+        detail: prokerDetail,
+      });
+    } else if (skorBerubah || catatanDpmBerubah) {
+      await createInAppNotification({
+        judul: 'Evaluasi Proker BEM Diperbarui',
+        pesan: `Evaluasi DPM untuk proker "${updated.nama}" (${updated.divisi}) telah diperbarui.`,
+        jenis: 'pengawasan',
+        link: `/dashboard/pengawasan`,
+        detail: prokerDetail,
+      });
+    } else if (progressBerubah) {
+      await createInAppNotification({
+        judul: 'Progress Proker BEM Diperbarui',
+        pesan: `Progress proker "${updated.nama}" (${updated.divisi}) kini mencapai ${updated.progress_percentage}%.`,
+        jenis: 'pengawasan',
+        link: `/dashboard/pengawasan`,
+        detail: prokerDetail,
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Data Proker BEM Diperbarui',
+        pesan: `Informasi proker "${updated.nama}" (${updated.divisi}) telah diperbarui.`,
+        jenis: 'pengawasan',
+        link: `/dashboard/pengawasan`,
+        detail: prokerDetail,
+      });
+    }
+
     const formattedProker = {
       ...updated,
       bukti_urls: updated.bukti_urls ? JSON.parse(updated.bukti_urls) : [],
@@ -136,6 +187,17 @@ export async function DELETE(request: Request, { params }: Params) {
         detail: `Menghapus proker BEM: "${existing.nama}" - Divisi ${existing.divisi} (ID: ${id})`,
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
+      },
+    });
+
+    await createInAppNotification({
+      judul: 'Program Kerja BEM Dihapus',
+      pesan: `Proker BEM "${existing.nama}" (${existing.divisi}) telah dihapus dari sistem pengawasan oleh ${session.user?.name || 'Anggota DPM'}.`,
+      jenis: 'pengawasan',
+      detail: {
+        Divisi: existing.divisi,
+        'PJ Terakhir': existing.penanggung_jawab,
+        'Status Terakhir': statusLabel(existing.status),
       },
     });
 

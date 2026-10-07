@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,13 +91,40 @@ export async function PUT(request: Request, { params }: Params) {
       },
     });
 
-    // Create Notification if it was revised
-    if (updated.revisi_ke > existing.revisi_ke) {
+    // Notifikasi grup: perubahan status diprioritaskan, lalu revisi
+    const legDetail = {
+      Nomor: updated.nomor,
+      Jenis: statusLabel(updated.jenis),
+      Komisi: updated.komisi,
+      Status: statusLabel(updated.status),
+      'Diperbarui oleh': session.user?.name || 'Anggota DPM',
+    };
+    if (body.status !== undefined && updated.status !== existing.status) {
+      const disahkan = /sah/i.test(updated.status);
+      await createInAppNotification({
+        judul: disahkan ? 'Produk Legislasi Disahkan' : 'Status Legislasi Diperbarui',
+        pesan: disahkan
+          ? `"${updated.judul}" telah resmi DISAHKAN.`
+          : `Status "${updated.judul}" berubah dari ${statusLabel(existing.status)} menjadi ${statusLabel(updated.status)}.`,
+        jenis: 'legislasi',
+        link: `/dashboard/legislasi/${id}`,
+        detail: { ...legDetail, 'Tanggal Disahkan': disahkan ? updated.tanggal_disahkan : undefined },
+      });
+    } else if (updated.revisi_ke > existing.revisi_ke) {
       await createInAppNotification({
         judul: 'Draft RUU Direvisi',
         pesan: `Draft "${updated.judul}" telah direvisi (Revisi ke-${updated.revisi_ke}).`,
         jenis: 'legislasi',
         link: `/dashboard/legislasi/${id}`,
+        detail: legDetail,
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Data Legislasi Diperbarui',
+        pesan: `Draft "${updated.judul}" telah diperbarui.`,
+        jenis: 'legislasi',
+        link: `/dashboard/legislasi/${id}`,
+        detail: legDetail,
       });
     }
 
@@ -148,6 +175,13 @@ export async function DELETE(request: Request, { params }: Params) {
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
+    });
+
+    await createInAppNotification({
+      judul: 'Produk Legislasi Dihapus',
+      pesan: `Draft "${existing.judul}" telah dihapus oleh ${session.user?.name || 'Anggota DPM'}.`,
+      jenis: 'legislasi',
+      detail: { Nomor: existing.nomor, 'Status Terakhir': statusLabel(existing.status) },
     });
 
     return NextResponse.json({ success: true, message: 'Legislasi berhasil dihapus' });

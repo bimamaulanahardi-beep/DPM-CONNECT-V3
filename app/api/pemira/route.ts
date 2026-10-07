@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +77,23 @@ export async function POST(request: Request) {
         detail: `Judul: ${judul} dengan ${candidates.length} Paslon`,
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
+      },
+    });
+
+    const paslonList = candidates
+      .map((c: any, i: number) => `   ${i + 1}. ${c.nama_ketua}${c.nama_wakil ? ` & ${c.nama_wakil}` : ''}`)
+      .join('\n');
+
+    await createInAppNotification({
+      judul: 'Event Pemira Baru Dibuat',
+      pesan: `Event Pemilihan Raya "${judul}" telah dibuat.`,
+      jenis: 'pemira',
+      link: `/dashboard/pemira/${newPemira.id}`,
+      detail: {
+        'Jadwal Pemilihan': `${tanggal_mulai} s.d ${tanggal_selesai}`,
+        'Total DPT': total_dpt ? `${total_dpt} pemilih` : undefined,
+        Paslon: paslonList ? `\n${paslonList}` : undefined,
+        Deskripsi: ringkas(deskripsi, 400),
       },
     });
 

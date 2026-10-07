@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,6 +93,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const body = await request.json();
     const { status, judul, deskripsi, pertanyaan, tanggal_mulai, tanggal_selesai, is_publik } = body;
 
+    const existing = await prisma.referendum.findUnique({
+      where: { id: params.id },
+      include: {
+        votes: {
+          select: { pilihan: true }
+        }
+      }
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Referendum tidak ditemukan' }, { status: 404 });
+    }
+
     const dataToUpdate: any = {};
     if (status !== undefined) dataToUpdate.status = status;
     if (judul !== undefined) dataToUpdate.judul = judul;
@@ -105,6 +119,62 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       where: { id: params.id },
       data: dataToUpdate,
     });
+
+    // Notifikasi grup WA
+    const statusBerubah = existing.status !== updated.status;
+    const refDetail = {
+      Pertanyaan: updated.pertanyaan,
+      Pelaksanaan: `${updated.tanggal_mulai} s.d ${updated.tanggal_selesai}`,
+      Status: statusLabel(updated.status),
+      'Diperbarui oleh': user.name || 'Anggota DPM',
+    };
+
+    if (statusBerubah && updated.status === 'aktif') {
+      await createInAppNotification({
+        judul: 'Referendum Dibuka',
+        pesan: `Referendum: "${updated.judul}" telah dibuka untuk seluruh mahasiswa ITB Riau.`,
+        jenis: 'referendum',
+        link: `/referendum`,
+        detail: refDetail,
+      });
+    } else if (statusBerubah && updated.status === 'selesai') {
+      // Hitung perolehan suara
+      const voteCounts: Record<string, number> = {};
+      existing.votes.forEach((v) => {
+        voteCounts[v.pilihan] = (voteCounts[v.pilihan] || 0) + 1;
+      });
+      const breakdown = Object.entries(voteCounts)
+        .map(([opt, cnt]) => `   - ${opt}: ${cnt} suara`)
+        .join('\n');
+
+      await createInAppNotification({
+        judul: 'Referendum Ditutup',
+        pesan: `Referendum: "${updated.judul}" telah resmi ditutup.`,
+        jenis: 'referendum',
+        link: `/referendum`,
+        detail: {
+          Pertanyaan: updated.pertanyaan,
+          'Total Pemilih': `${existing.votes.length} suara masuk`,
+          Hasil: breakdown ? `\n${breakdown}` : 'Belum ada suara',
+        },
+      });
+    } else if (statusBerubah) {
+      await createInAppNotification({
+        judul: 'Status Referendum Diperbarui',
+        pesan: `Status referendum "${updated.judul}" berubah dari ${statusLabel(existing.status)} menjadi ${statusLabel(updated.status)}.`,
+        jenis: 'referendum',
+        link: `/dashboard/referendum/${updated.id}`,
+        detail: refDetail,
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Data Referendum Diperbarui',
+        pesan: `Data referendum "${updated.judul}" telah diperbarui.`,
+        jenis: 'referendum',
+        link: `/dashboard/referendum/${updated.id}`,
+        detail: refDetail,
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -126,8 +196,26 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'Hanya Admin atau Pimpinan yang dapat menghapus referendum' }, { status: 403 });
     }
 
+    const existing = await prisma.referendum.findUnique({
+      where: { id: params.id },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Referendum tidak ditemukan' }, { status: 404 });
+    }
+
     await prisma.referendum.delete({
       where: { id: params.id },
+    });
+
+    await createInAppNotification({
+      judul: 'Referendum Dihapus',
+      pesan: `Referendum "${existing.judul}" telah dihapus oleh ${user.name || 'Admin'}.`,
+      jenis: 'referendum',
+      detail: {
+        Pertanyaan: existing.pertanyaan,
+        'Status Terakhir': statusLabel(existing.status),
+      },
     });
 
     return NextResponse.json({ success: true });

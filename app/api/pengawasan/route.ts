@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,22 @@ export async function POST(request: Request) {
         detail: `Membuat evaluasi proker BEM: "${nama}" (ID: ${id})`,
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
+      },
+    });
+
+    await createInAppNotification({
+      judul: 'Program Kerja BEM Ditambahkan',
+      pesan: `Proker BEM "${nama}" (${divisi}) telah didaftarkan dalam sistem pengawasan.`,
+      jenis: 'pengawasan',
+      link: `/dashboard/pengawasan`,
+      detail: {
+        Divisi: divisi,
+        'Penanggung Jawab': penanggung_jawab,
+        Target: target,
+        Jadwal: `${newProker.tanggal_mulai} s.d ${newProker.tanggal_selesai}`,
+        Status: statusLabel(status),
+        'Progress Awal': `${newProker.progress_percentage}%`,
+        Deskripsi: ringkas(deskripsi, 400),
       },
     });
 

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -95,6 +96,23 @@ export async function POST(request: Request) {
         detail: `Mengarsipkan surat ${jenis}: "${perihal}" (Nomor: ${nomor}) (ID: ${id})`,
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
+      },
+    });
+
+    await createInAppNotification({
+      judul: jenis === 'keluar' ? 'Surat Keluar Baru' : jenis === 'masuk' ? 'Surat Masuk Baru' : 'Surat Baru Diarsipkan',
+      pesan: `Surat perihal "${perihal}" telah diarsipkan oleh ${session.user?.name || 'Anggota DPM'}.`,
+      jenis: 'surat',
+      link: '/dashboard/surat',
+      detail: {
+        Nomor: nomor,
+        Jenis: statusLabel(jenis),
+        Dari: dari,
+        Kepada: kepada,
+        Tanggal: newSurat.tanggal,
+        Status: statusLabel(status),
+        Disposisi: disposisi_kepada,
+        Ringkasan: isi_singkat ? ringkas(isi_singkat, 400) : undefined,
       },
     });
 

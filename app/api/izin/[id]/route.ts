@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -120,6 +121,24 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       }
     }
 
+    // Notifikasi ke grup WA DPM
+    const labelKeputusan =
+      status === 'disetujui' ? 'Disetujui ✅' : status === 'ditolak' ? 'Ditolak ❌' : status === 'perlu_revisi' ? 'Perlu Revisi 📝' : status;
+    await createInAppNotification({
+      judul: `Izin Kegiatan ${labelKeputusan}`,
+      pesan: `Permohonan izin "${updated.nama_kegiatan}" oleh ${updated.penyelenggara} telah diproses.`,
+      jenis: 'izin',
+      link: `/dashboard/izin/${updated.id}`,
+      detail: {
+        Kode: updated.kode,
+        Status: labelKeputusan,
+        Jadwal: `${updated.tanggal_mulai} ${updated.waktu_mulai || ''}`.trim(),
+        Lokasi: updated.lokasi,
+        'Diproses oleh': updated.diproses_oleh,
+        Catatan: catatan_dpm ? ringkas(catatan_dpm, 500) : undefined,
+      },
+    });
+
     return NextResponse.json(updated);
   } catch (error) {
     console.error('PATCH izin error:', error);
@@ -151,6 +170,14 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
     }
 
     await prisma.izinKegiatan.delete({ where: { id: targetIzin.id } });
+
+    await createInAppNotification({
+      judul: 'Permohonan Izin Dihapus',
+      pesan: `Permohonan izin "${targetIzin.nama_kegiatan}" (${targetIzin.penyelenggara}) telah dihapus oleh ${user.name || 'Admin'}.`,
+      jenis: 'izin',
+      detail: { Kode: targetIzin.kode, 'Status Terakhir': targetIzin.status },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Gagal menghapus' }, { status: 500 });

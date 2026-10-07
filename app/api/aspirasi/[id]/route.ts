@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +135,29 @@ export async function PUT(request: Request, { params }: Params) {
       },
     });
 
+    // Notifikasi grup WA jika status / tindak lanjut berubah
+    const statusBerubah = body.status !== undefined && body.status !== existing.status;
+    const catatanBerubah =
+      body.catatan_tindak_lanjut !== undefined && body.catatan_tindak_lanjut !== existing.catatan_tindak_lanjut;
+    if (statusBerubah || catatanBerubah) {
+      await createInAppNotification({
+        judul: statusBerubah ? 'Status Aspirasi Diperbarui' : 'Tindak Lanjut Aspirasi Diperbarui',
+        pesan: statusBerubah
+          ? `Aspirasi "${updated.judul}" kini berstatus ${statusLabel(updated.status)}.`
+          : `Catatan tindak lanjut aspirasi "${updated.judul}" telah diperbarui.`,
+        jenis: 'aspirasi',
+        link: `/dashboard/aspirasi/${existing.id}`,
+        detail: {
+          'Kode Lacak': existing.kode_tracking,
+          Kategori: existing.kategori,
+          'Status Lama': statusBerubah ? statusLabel(existing.status) : undefined,
+          'Status Baru': statusLabel(updated.status),
+          Petugas: updated.petugas || session.user?.name,
+          'Tindak Lanjut': updated.catatan_tindak_lanjut ? ringkas(updated.catatan_tindak_lanjut, 500) : undefined,
+        },
+      });
+    }
+
     return NextResponse.json(finalAspirasi);
   } catch (error: any) {
     console.error('Error updating aspirasi:', error);
@@ -172,6 +196,13 @@ export async function DELETE(request: Request, { params }: Params) {
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
+    });
+
+    await createInAppNotification({
+      judul: 'Aspirasi Dihapus',
+      pesan: `Aspirasi "${existing.judul}" telah dihapus oleh ${session.user?.name || 'Anggota DPM'}.`,
+      jenis: 'aspirasi',
+      detail: { 'Kode Lacak': existing.kode_tracking, Kategori: existing.kategori },
     });
 
     return NextResponse.json({ message: 'Aspirasi berhasil dihapus' });

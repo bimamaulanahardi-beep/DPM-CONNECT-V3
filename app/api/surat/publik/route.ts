@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import crypto from 'crypto';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, ringkas } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -162,6 +162,13 @@ export async function POST(request: Request) {
       pesan: `Surat masuk dari ${instansi} perihal "${perihal}" menunggu untuk didisposisikan.`,
       jenis: 'surat',
       link: `/dashboard/surat`,
+      detail: {
+        'ID Surat': id,
+        Pengirim: `${nama_pengirim} (${instansi})`,
+        Perihal: perihal,
+        Tanggal: tanggal || new Date().toISOString().split('T')[0],
+        Ringkasan: isi_singkat ? ringkas(isi_singkat, 400) : undefined,
+      },
     });
 
     // Kirim Notifikasi Email ke Admin DPM

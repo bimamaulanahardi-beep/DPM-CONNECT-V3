@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -112,6 +113,29 @@ export async function POST(request: Request) {
         detail: `Membuat voting: "${judul}" (ID: ${id})`,
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
+      },
+    });
+
+    await createInAppNotification({
+      judul: status === 'aktif' ? 'Pemungutan Suara Dibuka' : 'Sesi Voting Baru Dibuat',
+      pesan:
+        status === 'aktif'
+          ? `Sesi voting "${judul}" telah dibuka. Silakan berikan suara Anda.`
+          : `Sesi voting "${judul}" telah dibuat dan akan segera dibuka.`,
+      jenis: 'voting',
+      link: `/dashboard/voting/${id}`,
+      detail: {
+        Deskripsi: ringkas(deskripsi, 400),
+        Jenis: jenis === 'binary' ? 'Setuju / Tidak Setuju / Abstain' : 'Multi Pilihan',
+        Opsi:
+          Array.isArray(opsi_multipilih) && opsi_multipilih.length
+            ? opsi_multipilih
+                .map((o: any) => (typeof o === 'string' ? o : o?.label || o?.nama || o?.text || JSON.stringify(o)))
+                .join(', ')
+            : undefined,
+        Mulai: tanggal_mulai,
+        Selesai: tanggal_selesai,
+        Status: statusLabel(status),
       },
     });
 

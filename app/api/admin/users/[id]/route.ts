@@ -5,6 +5,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import bcrypt from 'bcryptjs';
+import { createInAppNotification, statusLabel } from '@/lib/notification';
 
 // Helper to check authorization
 async function checkAuth() {
@@ -87,6 +88,38 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
       },
     });
 
+    // Notifikasi grup WA
+    const roleBerubah = userToUpdate.role !== updatedUser.role;
+    const jabatanBerubah = userToUpdate.jabatan !== updatedUser.jabatan;
+    const komisiBerubah = userToUpdate.komisi !== updatedUser.komisi;
+    if (roleBerubah || jabatanBerubah || komisiBerubah) {
+      await createInAppNotification({
+        judul: 'Jabatan / Peran Anggota Diperbarui',
+        pesan: `Informasi peran/struktur untuk ${updatedUser.name} telah diperbarui oleh ${currentUser.name || 'Admin'}.`,
+        jenis: 'anggota',
+        link: `/dashboard/anggota`,
+        detail: {
+          Nama: updatedUser.name,
+          NIM: updatedUser.nim,
+          'Peran Baru': statusLabel(updatedUser.role),
+          Komisi: updatedUser.komisi,
+          Jabatan: updatedUser.jabatan,
+        },
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Data Anggota Diperbarui',
+        pesan: `Data profil ${updatedUser.name} telah diperbarui.`,
+        jenis: 'anggota',
+        link: `/dashboard/anggota`,
+        detail: {
+          Nama: updatedUser.name,
+          NIM: updatedUser.nim,
+          Peran: statusLabel(updatedUser.role),
+        },
+      });
+    }
+
     return NextResponse.json({
       success: true,
       user: {
@@ -140,6 +173,19 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
         detail: `Menghapus pengguna ${userToDelete.name} (NIM: ${userToDelete.nim}).`,
         ip_address: req.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
+      },
+    });
+
+    await createInAppNotification({
+      judul: 'Akun Anggota Dihapus',
+      pesan: `Akun anggota atas nama ${userToDelete.name} (NIM: ${userToDelete.nim}) telah dihapus dari sistem oleh ${currentUser.name || 'Admin'}.`,
+      jenis: 'anggota',
+      detail: {
+        Nama: userToDelete.name,
+        NIM: userToDelete.nim,
+        'Peran Terakhir': statusLabel(userToDelete.role),
+        Komisi: userToDelete.komisi,
+        Jabatan: userToDelete.jabatan,
       },
     });
 

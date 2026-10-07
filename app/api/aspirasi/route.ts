@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { generateTrackingCode } from '@/lib/utils';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, ringkas } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,6 +93,12 @@ export async function POST(request: Request) {
       pesan: `Aspirasi dengan topik "${judul}" telah diterima dari ${is_anonim ? 'Anonim' : nama_pengaju}.`,
       jenis: 'aspirasi',
       link: `/dashboard/aspirasi/${id}`,
+      detail: {
+        Kategori: kategori,
+        'Kode Lacak': kode_tracking,
+        Pengaju: is_anonim ? 'Anonim' : (nama_pengaju || 'Tidak diketahui'),
+        'Isi Aspirasi': `\n${ringkas(deskripsi)}`,
+      },
     });
 
     // Kirim Email ke Admin DPM

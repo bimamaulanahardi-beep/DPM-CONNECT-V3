@@ -1,25 +1,129 @@
 import { prisma } from '@/lib/db';
 import { sendWhatsApp } from '@/lib/whatsapp';
 
-/**
- * Creates an in-app notification in the database
- * 
- * @param judul Title of the notification
- * @param pesan Notification body text
- * @param jenis Type of notification ('sidang' | 'legislasi' | 'aspirasi' | 'voting' | 'pengumuman' | 'surat')
- * @param link Optional relative link when the notification is clicked (e.g. '/dashboard/sidang/123')
- */
-export async function createInAppNotification({
+/** Label modul yang ditampilkan di header pesan grup WhatsApp. */
+const MODUL_LABEL: Record<string, string> = {
+  sidang: '🏛️ Sidang',
+  legislasi: '📜 Legislasi',
+  aspirasi: '💬 Aspirasi',
+  voting: '🗳️ Voting',
+  pengumuman: '📢 Pengumuman',
+  surat: '✉️ Persuratan',
+  izin: '📝 Izin Kegiatan',
+  pengawasan: '🔍 Pengawasan',
+  lpj: '📊 LPJ',
+  pemira: '🗳️ Pemira',
+  referendum: '🗳️ Referendum',
+  anggota: '👥 Keanggotaan',
+};
+
+/** Detail tambahan (key → value) yang ditampilkan sebagai bullet list di pesan WA. */
+export type NotificationDetail = Record<string, string | number | null | undefined>;
+
+/** URL dasar aplikasi untuk membuat tautan yang bisa diklik di WhatsApp. */
+function getAppUrl(): string | null {
+  const raw =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.NEXTAUTH_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+  const url = raw?.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
+  return url || null;
+}
+
+/** Ubah kode status (mis. "perlu_revisi") menjadi teks yang mudah dibaca ("Perlu Revisi"). */
+export function statusLabel(status?: string | null): string {
+  if (!status) return '-';
+  return status
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Potong teks panjang agar pesan grup tetap ringkas. */
+export function ringkas(text?: string | null, max = 700): string {
+  if (!text) return '';
+  const clean = String(text).replace(/<[^>]*>/g, '').trim();
+  return clean.length > max ? `${clean.slice(0, max).trimEnd()}…` : clean;
+}
+
+/** Bentuk pesan WhatsApp grup dengan format seragam. */
+export function formatGroupMessage({
   judul,
   pesan,
   jenis,
-  link = null
+  link,
+  detail,
 }: {
   judul: string;
   pesan: string;
   jenis: string;
   link?: string | null;
+  detail?: NotificationDetail;
+}): string {
+  const modul = MODUL_LABEL[jenis] || '📢 Info';
+  const lines: string[] = [`*DPM ITB RIAU — ${modul}*`, '', `*${judul}*`, pesan];
+
+  const detailLines = Object.entries(detail || {})
+    .filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '')
+    .map(([k, v]) => `• *${k}:* ${v}`);
+  if (detailLines.length) lines.push('', ...detailLines);
+
+  if (link) {
+    const base = getAppUrl();
+    const full = /^https?:\/\//.test(link) ? link : base ? `${base}${link.startsWith('/') ? '' : '/'}${link}` : null;
+    if (full) lines.push('', `🔗 ${full}`);
+  }
+
+  lines.push('', `_${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })} WIB_`);
+  return lines.join('\n');
+}
+
+/**
+ * Kirim pesan ke grup WhatsApp DPM (WA_GROUP_ID). Tidak pernah melempar error.
+ */
+export async function notifyGroup(args: {
+  judul: string;
+  pesan: string;
+  jenis: string;
+  link?: string | null;
+  detail?: NotificationDetail;
+}): Promise<boolean> {
+  const groupId = process.env.WA_GROUP_ID?.trim();
+  if (!groupId) return false;
+  try {
+    const result = await sendWhatsApp({ to: groupId, message: formatGroupMessage(args) });
+    return result.success;
+  } catch (e) {
+    console.error('Failed to send notification to WA Group:', e);
+    return false;
+  }
+}
+
+/**
+ * Creates an in-app notification in the database
+ * 
+ * @param judul Title of the notification
+ * @param pesan Notification body text
+ * @param jenis Type of notification ('sidang' | 'legislasi' | 'aspirasi' | 'voting' | 'pengumuman' | 'surat' | 'izin' | 'pengawasan' | 'lpj' | 'pemira' | 'referendum' | 'anggota')
+ * @param link Optional relative link when the notification is clicked (e.g. '/dashboard/sidang/123')
+ * @param detail Optional extra key/value info shown only in the WhatsApp group message
+ * @param waGroup Set false to skip forwarding to the WhatsApp group (default: true)
+ */
+export async function createInAppNotification({
+  judul,
+  pesan,
+  jenis,
+  link = null,
+  detail,
+  waGroup = true,
+}: {
+  judul: string;
+  pesan: string;
+  jenis: string;
+  link?: string | null;
+  detail?: NotificationDetail;
+  waGroup?: boolean;
 }) {
+  let saved = false;
   try {
     await prisma.notifikasi.create({
       data: {
@@ -31,23 +135,17 @@ export async function createInAppNotification({
         link,
       },
     });
-
-    // Automatically broadcast to WA Group if configured
-    const groupId = process.env.WA_GROUP_ID;
-    if (groupId) {
-      const waMessage = `*INFO DPM ITB RIAU*\n\n*${judul}*\n${pesan}`;
-      try {
-        await sendWhatsAppMessage(groupId, waMessage);
-      } catch (e) {
-        console.error('Failed to auto-forward notification to WA Group:', e);
-      }
-    }
-
-    return true;
+    saved = true;
   } catch (error) {
     console.error('Failed to create in-app notification:', error);
-    return false;
   }
+
+  // Automatically broadcast to WA Group if configured (tetap dikirim walau simpan DB gagal)
+  if (waGroup) {
+    await notifyGroup({ judul, pesan, jenis, link, detail });
+  }
+
+  return saved;
 }
 
 /**

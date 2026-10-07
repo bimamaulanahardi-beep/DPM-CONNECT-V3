@@ -104,6 +104,21 @@ export async function POST(request: Request) {
       pesan: `Sidang "${judul}" telah dijadwalkan pada ${tanggal} pukul ${waktu_mulai}.`,
       jenis: 'sidang',
       link: `/dashboard/sidang/${id}`,
+      detail: {
+        Jenis: newSidang.jenis,
+        Lokasi: newSidang.lokasi,
+        'Link Daring': newSidang.link_daring,
+        Agenda: (() => {
+          try {
+            const list = JSON.parse(newSidang.agenda || '[]');
+            return Array.isArray(list) && list.length
+              ? '\n' + list.map((a: any, i: number) => `   ${i + 1}. ${typeof a === 'string' ? a : a?.judul || a?.title || JSON.stringify(a)}`).join('\n')
+              : undefined;
+          } catch {
+            return undefined;
+          }
+        })(),
+      },
     });
 
     const formattedSidang = {

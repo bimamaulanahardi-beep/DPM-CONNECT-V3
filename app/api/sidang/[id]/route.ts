@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { createInAppNotification } from '@/lib/notification';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,13 +93,91 @@ export async function PUT(request: Request, { params }: Params) {
       },
     });
 
-    // Create Notification if status changed to berlangsung
-    if (existing.status !== 'berlangsung' && updated.status === 'berlangsung') {
+    // Notifikasi grup WA untuk setiap perubahan sidang
+    const link = `/dashboard/sidang/${id}`;
+    const statusBerubah = existing.status !== updated.status;
+    const jadwalBerubah =
+      existing.tanggal !== updated.tanggal ||
+      existing.waktu_mulai !== updated.waktu_mulai ||
+      existing.lokasi !== updated.lokasi ||
+      (existing.link_daring || '') !== (updated.link_daring || '');
+    const sidangDetail = {
+      Jenis: statusLabel(updated.jenis),
+      Jadwal: `${updated.tanggal} pukul ${updated.waktu_mulai}${updated.waktu_selesai ? ` - ${updated.waktu_selesai}` : ''}`,
+      Lokasi: updated.lokasi,
+      'Link Daring': updated.link_daring,
+      Quorum: `${updated.quorum_achieved}% (minimal ${updated.quorum_required}%)`,
+    };
+
+    if (statusBerubah && updated.status === 'berlangsung') {
       await createInAppNotification({
         judul: 'Sidang Dimulai',
         pesan: `Sidang "${updated.judul}" saat ini sedang berlangsung.`,
         jenis: 'sidang',
-        link: `/dashboard/sidang/${id}`,
+        link,
+        detail: sidangDetail,
+      });
+    } else if (statusBerubah && updated.status === 'selesai') {
+      await createInAppNotification({
+        judul: 'Sidang Selesai',
+        pesan: `Sidang "${updated.judul}" telah selesai dilaksanakan.`,
+        jenis: 'sidang',
+        link,
+        detail: {
+          ...sidangDetail,
+          Notulensi: updated.notulensi ? `\n${ringkas(updated.notulensi, 800)}` : undefined,
+        },
+      });
+    } else if (statusBerubah && /batal|tunda/i.test(updated.status)) {
+      await createInAppNotification({
+        judul: /batal/i.test(updated.status) ? 'Sidang Dibatalkan' : 'Sidang Ditunda',
+        pesan: `Sidang "${updated.judul}" ${/batal/i.test(updated.status) ? 'DIBATALKAN' : 'DITUNDA'}.`,
+        jenis: 'sidang',
+        link,
+        detail: sidangDetail,
+      });
+    } else if (statusBerubah) {
+      await createInAppNotification({
+        judul: 'Status Sidang Diperbarui',
+        pesan: `Status sidang "${updated.judul}" berubah dari ${statusLabel(existing.status)} menjadi ${statusLabel(updated.status)}.`,
+        jenis: 'sidang',
+        link,
+        detail: sidangDetail,
+      });
+    } else if (jadwalBerubah) {
+      await createInAppNotification({
+        judul: 'Jadwal Sidang Diubah',
+        pesan: `Terdapat perubahan jadwal/lokasi untuk sidang "${updated.judul}". Mohon perhatikan jadwal terbaru.`,
+        jenis: 'sidang',
+        link,
+        detail: {
+          'Jadwal Lama': `${existing.tanggal} pukul ${existing.waktu_mulai} — ${existing.lokasi}`,
+          ...sidangDetail,
+        },
+      });
+    } else if (body.quorum_achieved !== undefined && Number(body.quorum_achieved) !== existing.quorum_achieved) {
+      await createInAppNotification({
+        judul: 'Absensi Sidang Diperbarui',
+        pesan: `Absensi/quorum sidang "${updated.judul}" telah diperbarui.`,
+        jenis: 'sidang',
+        link,
+        detail: { Quorum: sidangDetail.Quorum },
+      });
+    } else if (body.notulensi !== undefined && body.notulensi !== existing.notulensi) {
+      await createInAppNotification({
+        judul: 'Notulensi Sidang Diperbarui',
+        pesan: `Notulensi sidang "${updated.judul}" telah diperbarui.`,
+        jenis: 'sidang',
+        link,
+        detail: { Notulensi: `\n${ringkas(updated.notulensi, 800)}` },
+      });
+    } else {
+      await createInAppNotification({
+        judul: 'Data Sidang Diperbarui',
+        pesan: `Data sidang "${updated.judul}" telah diperbarui oleh ${session.user?.name || 'Anggota DPM'}.`,
+        jenis: 'sidang',
+        link,
+        detail: sidangDetail,
       });
     }
 
@@ -151,6 +229,13 @@ export async function DELETE(request: Request, { params }: Params) {
         ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
         tanggal: new Date().toISOString(),
       },
+    });
+
+    await createInAppNotification({
+      judul: 'Sidang Dihapus',
+      pesan: `Sidang "${existing.judul}" (${existing.tanggal} pukul ${existing.waktu_mulai}) telah dihapus dari jadwal oleh ${session.user?.name || 'Anggota DPM'}.`,
+      jenis: 'sidang',
+      detail: { Lokasi: existing.lokasi, 'Status Terakhir': statusLabel(existing.status) },
     });
 
     return NextResponse.json({ success: true, message: 'Sidang berhasil dihapus' });

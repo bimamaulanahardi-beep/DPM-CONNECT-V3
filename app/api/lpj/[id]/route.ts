@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { createInAppNotification, ringkas, statusLabel } from '@/lib/notification';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +56,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const now = new Date().toISOString();
 
+    const existing = await prisma.laporanLPJ.findUnique({ where: { id: params.id } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Dokumen LPJ tidak ditemukan' }, { status: 404 });
+    }
+
     const dataToUpdate: any = {
       updated_at: now,
     };
@@ -101,6 +107,42 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       }
     });
 
+    // Notifikasi grup WA
+    if (result) {
+      const lpjDetail = {
+        Lembaga: result.lembaga,
+        Periode: result.periode,
+        Ketua: result.ketua,
+        Status: statusLabel(result.status),
+        'Jumlah Bagian': result.sections.length,
+      };
+      if (existing.status !== result.status && result.status === 'diterbitkan') {
+        await createInAppNotification({
+          judul: '📊 LPJ Diterbitkan',
+          pesan: `${result.lembaga} telah mempublikasikan LPJ periode ${result.periode}: "${result.judul}".`,
+          jenis: 'lpj',
+          link: `/lpj/${result.id}`,
+          detail: { ...lpjDetail, Ringkasan: ringkas(result.ringkasan, 500) },
+        });
+      } else if (existing.status !== result.status) {
+        await createInAppNotification({
+          judul: 'Status LPJ Diperbarui',
+          pesan: `Status LPJ "${result.judul}" berubah dari ${statusLabel(existing.status)} menjadi ${statusLabel(result.status)}.`,
+          jenis: 'lpj',
+          link: `/dashboard/lpj/${result.id}`,
+          detail: lpjDetail,
+        });
+      } else {
+        await createInAppNotification({
+          judul: 'Dokumen LPJ Diperbarui',
+          pesan: `LPJ "${result.judul}" telah diperbarui oleh ${user.name || 'Anggota'}.`,
+          jenis: 'lpj',
+          link: `/dashboard/lpj/${result.id}`,
+          detail: lpjDetail,
+        });
+      }
+    }
+
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error updating LPJ:', error);
@@ -121,8 +163,20 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
       return NextResponse.json({ error: 'Hanya Admin atau Pimpinan yang dapat menghapus dokumen LPJ ini' }, { status: 403 });
     }
 
+    const existing = await prisma.laporanLPJ.findUnique({ where: { id: params.id } });
+    if (!existing) {
+      return NextResponse.json({ error: 'Dokumen LPJ tidak ditemukan' }, { status: 404 });
+    }
+
     await prisma.laporanLPJ.delete({
       where: { id: params.id },
+    });
+
+    await createInAppNotification({
+      judul: 'Dokumen LPJ Dihapus',
+      pesan: `LPJ "${existing.judul}" (${existing.lembaga}, periode ${existing.periode}) telah dihapus oleh ${user.name || 'Admin'}.`,
+      jenis: 'lpj',
+      detail: { 'Status Terakhir': statusLabel(existing.status) },
     });
 
     return NextResponse.json({ success: true });
