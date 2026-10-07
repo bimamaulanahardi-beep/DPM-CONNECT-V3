@@ -141,7 +141,7 @@ export async function PUT(request: Request, { params }: Params) {
         judul: 'Status Pemira Diperbarui',
         pesan: `Status Pemira "${updated.judul}" berubah dari ${statusLabel(existing.status)} menjadi ${statusLabel(updated.status)}.`,
         jenis: 'pemira',
-        link: `/dashboard/pemira/${updated.id}`,
+        link: `/pemira/${updated.id}`,
         detail: pemiraDetail,
       });
     } else {
@@ -149,7 +149,7 @@ export async function PUT(request: Request, { params }: Params) {
         judul: 'Data Pemira Diperbarui',
         pesan: `Informasi Pemira "${updated.judul}" telah diperbarui.`,
         jenis: 'pemira',
-        link: `/dashboard/pemira/${updated.id}`,
+        link: `/pemira/${updated.id}`,
         detail: pemiraDetail,
       });
     }

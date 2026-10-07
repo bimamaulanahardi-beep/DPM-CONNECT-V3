@@ -21,13 +21,26 @@ const MODUL_LABEL: Record<string, string> = {
 export type NotificationDetail = Record<string, string | number | null | undefined>;
 
 /** URL dasar aplikasi untuk membuat tautan yang bisa diklik di WhatsApp. */
-function getAppUrl(): string | null {
-  const raw =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.NEXTAUTH_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-  const url = raw?.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
-  return url || null;
+function getAppUrl(): string {
+  // 1. Jika ada NEXT_PUBLIC_APP_URL yang eksplisit dan bukan localhost
+  const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
+  if (explicit && !explicit.includes('localhost') && !explicit.includes('127.0.0.1')) {
+    return explicit;
+  }
+
+  // 2. Jika NEXTAUTH_URL adalah domain publik (bukan localhost)
+  const nextAuth = process.env.NEXTAUTH_URL?.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '');
+  if (nextAuth && !nextAuth.includes('localhost') && !nextAuth.includes('127.0.0.1')) {
+    return nextAuth;
+  }
+
+  // 3. Jika berjalan di Vercel
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, '')}`;
+  }
+
+  // 4. Default fallback ke domain resmi DPM ITB Riau agar selalu bisa diklik di WA
+  return 'https://www.dpm-connect.my.id';
 }
 
 /** Ubah kode status (mis. "perlu_revisi") menjadi teks yang mudah dibaca ("Perlu Revisi"). */

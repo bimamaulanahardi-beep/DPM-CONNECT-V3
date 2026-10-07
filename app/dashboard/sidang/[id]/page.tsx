@@ -19,7 +19,10 @@ import {
   Upload,
   Loader2,
   Trash2,
-  Vote
+  Vote,
+  Pause,
+  RotateCcw,
+  Radio
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,6 +52,7 @@ export default function SidangDetailPage({ params }: PageProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Document attachments list state
   const [documents, setDocuments] = useState<any[]>([
@@ -203,6 +207,52 @@ export default function SidangDetailPage({ params }: PageProps) {
       });
     } finally {
       setIsSavingAttendance(false);
+    }
+  };
+
+  const handleUpdateStatus = async (newStatus: 'dijadwalkan' | 'berlangsung' | 'ditunda' | 'selesai') => {
+    setIsUpdatingStatus(true);
+    try {
+      const res = await fetch(`/api/sidang/${params.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        setSidang(updated);
+        const labelMap: Record<string, string> = {
+          berlangsung: 'Sedang Berlangsung',
+          ditunda: 'Sedang Ditunda',
+          selesai: 'Sidang Selesai',
+          dijadwalkan: 'Dijadwalkan',
+        };
+        toast({
+          title: 'Status Sidang Diperbarui',
+          description: `Status sidang berhasil diubah menjadi "${labelMap[newStatus] || newStatus}". Notifikasi telah dikirim ke grup WhatsApp.`,
+        });
+      } else {
+        const data = await res.json();
+        toast({
+          title: 'Gagal Memperbarui Status',
+          description: data.error || 'Terjadi kesalahan saat memperbarui status sidang.',
+          variant: 'destructive',
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      toast({
+        title: 'Kesalahan Jaringan',
+        description: 'Tidak dapat menghubungi server.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -396,6 +446,83 @@ export default function SidangDetailPage({ params }: PageProps) {
             </div>
           </div>
         )}
+
+        {/* Kontrol Status Sidang (Sedang Berlangsung / Sedang Ditunda / Sidang Selesai) */}
+        <div className="mt-6 pt-5 border-t border-slate-800/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-300">Ubah Status Sidang:</span>
+            <span className="text-[11px] text-slate-500 hidden sm:inline">• Otomatis kirim notif ke Grup WhatsApp</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Sedang Berlangsung */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isUpdatingStatus || sidang.status === 'berlangsung'}
+              onClick={() => handleUpdateStatus('berlangsung')}
+              className={`h-9 px-3.5 text-xs font-semibold rounded-lg border transition-all ${
+                sidang.status === 'berlangsung'
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 ring-1 ring-emerald-500/50 cursor-default'
+                  : 'bg-slate-950/60 text-slate-300 border-slate-800 hover:bg-emerald-500/15 hover:text-emerald-300 hover:border-emerald-500/40'
+              }`}
+            >
+              <Radio className={`w-3.5 h-3.5 mr-1.5 ${sidang.status === 'berlangsung' ? 'text-emerald-400 animate-pulse' : 'text-slate-400'}`} />
+              Sedang Berlangsung
+            </Button>
+
+            {/* Sedang Ditunda */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isUpdatingStatus || sidang.status === 'ditunda'}
+              onClick={() => handleUpdateStatus('ditunda')}
+              className={`h-9 px-3.5 text-xs font-semibold rounded-lg border transition-all ${
+                sidang.status === 'ditunda'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 ring-1 ring-amber-500/50 cursor-default'
+                  : 'bg-slate-950/60 text-slate-300 border-slate-800 hover:bg-amber-500/15 hover:text-amber-300 hover:border-amber-500/40'
+              }`}
+            >
+              <Pause className="w-3.5 h-3.5 mr-1.5 text-amber-400" />
+              Sedang Ditunda
+            </Button>
+
+            {/* Sidang Selesai */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={isUpdatingStatus || sidang.status === 'selesai'}
+              onClick={() => handleUpdateStatus('selesai')}
+              className={`h-9 px-3.5 text-xs font-semibold rounded-lg border transition-all ${
+                sidang.status === 'selesai'
+                  ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 ring-1 ring-blue-500/50 cursor-default'
+                  : 'bg-slate-950/60 text-slate-300 border-slate-800 hover:bg-blue-500/15 hover:text-blue-300 hover:border-blue-500/40'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1.5 text-blue-400" />
+              Sidang Selesai
+            </Button>
+
+            {/* Reset ke Dijadwalkan */}
+            {sidang.status !== 'dijadwalkan' && (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={isUpdatingStatus}
+                onClick={() => handleUpdateStatus('dijadwalkan')}
+                className="h-9 px-2.5 text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/80"
+                title="Kembalikan status ke Dijadwalkan"
+              >
+                <RotateCcw className="w-3 h-3 mr-1" />
+                Reset
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tabs Menu */}

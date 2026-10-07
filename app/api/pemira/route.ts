@@ -88,7 +88,7 @@ export async function POST(request: Request) {
       judul: 'Event Pemira Baru Dibuat',
       pesan: `Event Pemilihan Raya "${judul}" telah dibuat.`,
       jenis: 'pemira',
-      link: `/dashboard/pemira/${newPemira.id}`,
+      link: `/pemira/${newPemira.id}`,
       detail: {
         'Jadwal Pemilihan': `${tanggal_mulai} s.d ${tanggal_selesai}`,
         'Total DPT': total_dpt ? `${total_dpt} pemilih` : undefined,

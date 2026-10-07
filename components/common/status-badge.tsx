@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 const statusConfig: Record<string, { label: string; variant: any }> = {
   // Sidang
   dijadwalkan: { label: 'Dijadwalkan', variant: 'process' },
-  berlangsung: { label: 'Berlangsung', variant: 'approved' },
+  berlangsung: { label: 'Sedang Berlangsung', variant: 'approved' },
+  ditunda: { label: 'Sedang Ditunda', variant: 'pending' },
   dibatalkan: { label: 'Dibatalkan', variant: 'rejected' },
   
   // Legislasi

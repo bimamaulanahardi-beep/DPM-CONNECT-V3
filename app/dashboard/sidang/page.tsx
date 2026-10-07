@@ -58,7 +58,14 @@ export default function SidangListPage() {
   });
 
   const jenisList = ['semua', 'paripurna', 'komisi', 'dengar_pendapat', 'istimewa'];
-  const statusList = ['semua', 'dijadwalkan', 'berlangsung', 'selesai', 'dibatalkan'];
+  const statusList = [
+    { value: 'semua', label: 'Semua Status' },
+    { value: 'dijadwalkan', label: 'Dijadwalkan' },
+    { value: 'berlangsung', label: 'Sedang Berlangsung' },
+    { value: 'ditunda', label: 'Sedang Ditunda' },
+    { value: 'selesai', label: 'Sidang Selesai' },
+    { value: 'dibatalkan', label: 'Dibatalkan' },
+  ];
 
   return (
     <div className="space-y-6">
@@ -121,7 +128,7 @@ export default function SidangListPage() {
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 focus:outline-none focus:border-amber-500 capitalize"
             >
               {jenisList.map(type => (
-                <option key={type} value={type}>{type.replace('_', ' ')}</option>
+                <option key={type} value={type}>{type === 'semua' ? 'Semua Jenis' : type.replace('_', ' ')}</option>
               ))}
             </select>
           </div>
@@ -131,10 +138,10 @@ export default function SidangListPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 focus:outline-none focus:border-amber-500 capitalize"
+              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-400 focus:outline-none focus:border-amber-500"
             >
-              {statusList.map(status => (
-                <option key={status} value={status}>{status.replace('_', ' ')}</option>
+              {statusList.map(st => (
+                <option key={st.value} value={st.value}>{st.label}</option>
               ))}
             </select>
           </div>
