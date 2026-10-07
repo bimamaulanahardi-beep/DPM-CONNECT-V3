@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     });
 
     let remindersSent = 0;
+    const groupId = process.env.WA_GROUP_ID;
 
     for (const sidang of sidangs) {
       if (!sidang.tanggal || !sidang.waktu_mulai) continue;
@@ -49,10 +50,8 @@ export async function GET(request: Request) {
       if (reminderType) {
         const timeStr = `${sidang.tanggal} pukul ${sidang.waktu_mulai}`;
         const message = reminderType === 'H-1'
-          ? `*REMINDER SIDANG H-1*\n\nMengingatkan bahwa besok akan ada Sidang "${sidang.judul}" pada ${timeStr} bertempat di ${sidang.lokasi}.\n\nMohon kehadiran seluruh peserta tepat waktu.`
-          : `*REMINDER SIDANG H-30 MENIT*\n\nSidang "${sidang.judul}" akan segera dimulai dalam 30 menit (${timeStr}) di ${sidang.lokasi}.\n\nHarap segera bersiap.`;
-
-        const groupId = process.env.WA_GROUP_ID;
+          ? `*REMINDER SIDANG H-1*\n\nMengingatkan bahwa besok akan ada Sidang "${sidang.judul}" pada ${timeStr} bertempat di ${sidang.lokasi}.\n\nMohon kehadiran seluruh peserta tepat waktu.\n\n🔗 https://www.dpm-connect.my.id/dashboard/sidang`
+          : `*REMINDER SIDANG H-30 MENIT*\n\nSidang "${sidang.judul}" akan segera dimulai dalam 30 menit (${timeStr}) di ${sidang.lokasi}.\n\nHarap segera bersiap.\n\n🔗 https://www.dpm-connect.my.id/dashboard/sidang`;
 
         if (groupId) {
           // Send 1 message to the WhatsApp Group
@@ -77,6 +76,73 @@ export async function GET(request: Request) {
             }
           }
         }
+      }
+    }
+
+    // Process Kegiatan DPM Reminders
+    const kegiatans = await prisma.kegiatanDPM.findMany({
+      where: {
+        status: 'dijadwalkan',
+      }
+    });
+
+    for (const kegiatan of kegiatans) {
+      if (!kegiatan.tanggal || !kegiatan.waktu_mulai) continue;
+
+      const kegiatanDateStr = `${kegiatan.tanggal}T${kegiatan.waktu_mulai}:00`;
+      const kegiatanDateTime = new Date(kegiatanDateStr);
+      if (isNaN(kegiatanDateTime.getTime())) continue;
+
+      const diffMinutes = (kegiatanDateTime.getTime() - now.getTime()) / (1000 * 60);
+
+      // Check H-1 (within 24 hours down to 30 mins before)
+      if (!kegiatan.notif_h1_sent && diffMinutes <= 1440 && diffMinutes > 30) {
+        const timeStr = `${kegiatan.tanggal} pukul ${kegiatan.waktu_mulai}${kegiatan.waktu_selesai ? ` - ${kegiatan.waktu_selesai}` : ''} WIB`;
+        const msg = `*🔔 PENGINGAT KEGIATAN DPM (H-1)*\n\n` +
+          `Mengingatkan kepada seluruh anggota DPM ITB Riau, besok/dalam waktu dekat akan dilaksanakan kegiatan:\n\n` +
+          `📌 *Nama Agenda:* ${kegiatan.nama}\n` +
+          `📂 *Kategori:* ${kegiatan.kategori}\n` +
+          `📅 *Waktu:* ${timeStr}\n` +
+          `📍 *Lokasi:* ${kegiatan.lokasi || '-'}\n` +
+          `👤 *PJ:* ${kegiatan.penanggung_jawab || '-'}\n` +
+          (kegiatan.deskripsi ? `📝 *Deskripsi:* ${kegiatan.deskripsi}\n` : '') +
+          `\nMohon kehadiran dan kesiapannya tepat waktu. Terima kasih! 🙏\n\n` +
+          `🔗 Detail Kalender: https://www.dpm-connect.my.id/dashboard/kalender`;
+
+        if (groupId) {
+          await sendWhatsAppMessage(groupId, msg);
+          remindersSent++;
+        }
+
+        await prisma.kegiatanDPM.update({
+          where: { id: kegiatan.id },
+          data: { notif_h1_sent: true }
+        });
+      }
+
+      // Check Saat Waktu Tiba / H-30 Menit (within 30 mins before, or up to 60 mins after start time if not sent)
+      if (!kegiatan.notif_mulai_sent && diffMinutes <= 30 && diffMinutes >= -60) {
+        const timeStr = `${kegiatan.tanggal} pukul ${kegiatan.waktu_mulai}${kegiatan.waktu_selesai ? ` - ${kegiatan.waktu_selesai}` : ''} WIB`;
+        const msg = `*⏰ PENGINGAT KEGIATAN DPM (WAKTU TIBA)*\n\n` +
+          `Pemberitahuan kepada seluruh anggota DPM ITB Riau, agenda kegiatan berikut akan segera dimulai / sedang berlangsung:\n\n` +
+          `📌 *Nama Agenda:* ${kegiatan.nama}\n` +
+          `📂 *Kategori:* ${kegiatan.kategori}\n` +
+          `⏰ *Waktu:* ${timeStr}\n` +
+          `📍 *Lokasi:* ${kegiatan.lokasi || '-'}\n` +
+          `👤 *PJ:* ${kegiatan.penanggung_jawab || '-'}\n` +
+          (kegiatan.deskripsi ? `📝 *Deskripsi:* ${kegiatan.deskripsi}\n` : '') +
+          `\nDiharapkan kehadiran seluruh pihak terkait di lokasi kegiatan. Terima kasih! 🙏\n\n` +
+          `🔗 Detail Kalender: https://www.dpm-connect.my.id/dashboard/kalender`;
+
+        if (groupId) {
+          await sendWhatsAppMessage(groupId, msg);
+          remindersSent++;
+        }
+
+        await prisma.kegiatanDPM.update({
+          where: { id: kegiatan.id },
+          data: { notif_mulai_sent: true }
+        });
       }
     }
 

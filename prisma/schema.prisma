@@ -353,3 +353,28 @@ model LPJSection {
   lpj         LaporanLPJ @relation(fields: [lpj_id], references: [id], onDelete: Cascade)
 }
 
+// ============================================
+// MODUL KEGIATAN & AGENDA RESMI DPM
+// ============================================
+
+model KegiatanDPM {
+  id               String   @id @default(uuid())
+  nama             String
+  kategori         String   // rapat_internal, kunjungan_kerja, sosialisasi, workshop, pelantikan, upgrading, pengawasan, lainnya
+  deskripsi        String?  @db.Text
+  tanggal          String   // YYYY-MM-DD
+  waktu_mulai      String   // HH:mm
+  waktu_selesai    String?  // HH:mm
+  lokasi           String
+  penanggung_jawab String?
+  status           String   @default("dijadwalkan") // dijadwalkan, berlangsung, selesai, dibatalkan
+  notif_h1_sent    Boolean  @default(false)
+  notif_mulai_sent Boolean  @default(false)
+  created_by       String?
+  created_at       DateTime @default(now())
+
+  @@index([tanggal])
+  @@index([status])
+}
+
+

@@ -185,7 +185,7 @@ export interface Notifikasi {
   id: string;
   judul: string;
   pesan: string;
-  jenis: 'sidang' | 'legislasi' | 'aspirasi' | 'voting' | 'pengumuman' | 'surat' | 'izin' | 'pengawasan' | 'lpj' | 'pemira' | 'referendum' | 'anggota';
+  jenis: 'sidang' | 'legislasi' | 'aspirasi' | 'voting' | 'pengumuman' | 'surat' | 'izin' | 'pengawasan' | 'lpj' | 'pemira' | 'referendum' | 'anggota' | 'kegiatan';
   is_read: boolean;
   tanggal: string;
   link?: string;

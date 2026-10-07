@@ -15,6 +15,7 @@ const MODUL_LABEL: Record<string, string> = {
   pemira: '🗳️ Pemira',
   referendum: '🗳️ Referendum',
   anggota: '👥 Keanggotaan',
+  kegiatan: '📅 Kegiatan DPM',
 };
 
 /** Detail tambahan (key → value) yang ditampilkan sebagai bullet list di pesan WA. */
