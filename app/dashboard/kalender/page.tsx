@@ -675,22 +675,22 @@ export default function KalenderPage() {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-lg bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+              className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
             >
               {/* Modal Header */}
-              <div className="p-5 border-b border-slate-800 flex justify-between items-center bg-slate-950/30">
+              <div className="px-6 py-4.5 border-b border-slate-800/80 flex justify-between items-center bg-slate-950/40">
                 <div>
                   <h3 className="font-bold text-white text-base flex items-center gap-2">
                     <CalendarDays className="w-5 h-5 text-emerald-400" />
                     Buat Kegiatan DPM Baru
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    Agenda kegiatan akan otomatis diberitahukan ke Grup WhatsApp resmi DPM.
+                    Agenda kegiatan akan otomatis disiarkan ke Grup WhatsApp resmi DPM ITB Riau.
                   </p>
                 </div>
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="p-1.5 rounded-lg border border-slate-800 text-slate-500 hover:text-white hover:bg-slate-800"
+                  className="p-1.5 rounded-lg border border-slate-800 text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -698,49 +698,54 @@ export default function KalenderPage() {
 
               {/* Form Content */}
               <form onSubmit={handleCreateKegiatan} className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                <div className="p-5 space-y-4 overflow-y-auto flex-1 text-xs">
+                <div className="p-6 space-y-4 overflow-y-auto overflow-x-hidden flex-1 text-xs">
                   {/* Nama Kegiatan */}
                   <div className="space-y-1.5">
-                    <Label className="text-slate-300 font-semibold">Nama Kegiatan / Agenda *</Label>
+                    <Label className="text-slate-300 font-semibold text-xs">Nama Kegiatan / Agenda *</Label>
                     <Input
                       placeholder="Contoh: Rapat Kerja Komisi I, Sosialisasi Pemira, dll."
                       value={formNama}
                       onChange={e => setFormNama(e.target.value)}
                       required
-                      className="bg-slate-950/60 border-slate-800 text-white"
+                      className="h-10 bg-slate-950/70 border-slate-800 text-white rounded-xl focus:border-amber-500"
                     />
                   </div>
 
-                  {/* Kategori */}
-                  <div className="space-y-1.5">
-                    <Label className="text-slate-300 font-semibold">Kategori Kegiatan *</Label>
-                    <select
-                      value={formKategori}
-                      onChange={e => setFormKategori(e.target.value)}
-                      className="w-full bg-slate-950/60 border border-slate-800 text-white rounded-md px-3 py-2 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
-                    >
-                      <option value="Rapat Kerja / Internal">Rapat Kerja / Internal</option>
-                      <option value="Pengawasan Ormawa">Pengawasan Ormawa</option>
-                      <option value="Sosialisasi & Aspirasi">Sosialisasi & Aspirasi</option>
-                      <option value="Pelatihan & Kaderisasi">Pelatihan & Kaderisasi</option>
-                      <option value="Kegiatan Umum">Kegiatan Umum</option>
-                    </select>
-                  </div>
-
-                  {/* Tanggal & Waktu */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Kategori & Tanggal */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Tanggal *</Label>
+                      <Label className="text-slate-300 font-semibold text-xs">Kategori Kegiatan *</Label>
+                      <select
+                        value={formKategori}
+                        onChange={e => setFormKategori(e.target.value)}
+                        style={{ colorScheme: 'dark' }}
+                        className="w-full h-10 bg-slate-950/70 border border-slate-800 text-white rounded-xl px-3 text-xs focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 outline-none transition-all cursor-pointer"
+                      >
+                        <option value="Rapat Kerja / Internal">Rapat Kerja / Internal</option>
+                        <option value="Pengawasan Ormawa">Pengawasan Ormawa</option>
+                        <option value="Sosialisasi & Aspirasi">Sosialisasi & Aspirasi</option>
+                        <option value="Pelatihan & Kaderisasi">Pelatihan & Kaderisasi</option>
+                        <option value="Kegiatan Umum">Kegiatan Umum</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-slate-300 font-semibold text-xs">Tanggal Pelaksanaan *</Label>
                       <Input
                         type="date"
                         value={formTanggal}
                         onChange={e => setFormTanggal(e.target.value)}
                         required
-                        className="bg-slate-950/60 border-slate-800 text-white"
+                        style={{ colorScheme: 'dark' }}
+                        className="h-10 bg-slate-950/70 border-slate-800 text-white rounded-xl focus:border-amber-500 cursor-pointer"
                       />
                     </div>
+                  </div>
+
+                  {/* Waktu Mulai & Waktu Selesai (2 Kolom Lebar) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Waktu Mulai *</Label>
+                      <Label className="text-slate-300 font-semibold text-xs">Waktu Mulai *</Label>
                       <TimeInput24
                         value={formWaktuMulai}
                         onChange={setFormWaktuMulai}
@@ -748,7 +753,7 @@ export default function KalenderPage() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Waktu Selesai (Opsional)</Label>
+                      <Label className="text-slate-300 font-semibold text-xs">Waktu Selesai (Opsional)</Label>
                       <TimeInput24
                         value={formWaktuSelesai}
                         onChange={setFormWaktuSelesai}
@@ -757,55 +762,55 @@ export default function KalenderPage() {
                   </div>
 
                   {/* Lokasi & PJ */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Lokasi Pelaksanaan *</Label>
+                      <Label className="text-slate-300 font-semibold text-xs">Lokasi Pelaksanaan *</Label>
                       <Input
                         placeholder="Contoh: Ruang Rapat DPM / Google Meet"
                         value={formLokasi}
                         onChange={e => setFormLokasi(e.target.value)}
                         required
-                        className="bg-slate-950/60 border-slate-800 text-white"
+                        className="h-10 bg-slate-950/70 border-slate-800 text-white rounded-xl focus:border-amber-500"
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label className="text-slate-300 font-semibold">Penanggung Jawab (PJ)</Label>
+                      <Label className="text-slate-300 font-semibold text-xs">Penanggung Jawab (PJ)</Label>
                       <Input
                         placeholder="Contoh: Ketua Komisi II / Bima"
                         value={formPJ}
                         onChange={e => setFormPJ(e.target.value)}
-                        className="bg-slate-950/60 border-slate-800 text-white"
+                        className="h-10 bg-slate-950/70 border-slate-800 text-white rounded-xl focus:border-amber-500"
                       />
                     </div>
                   </div>
 
                   {/* Deskripsi */}
                   <div className="space-y-1.5">
-                    <Label className="text-slate-300 font-semibold">Deskripsi / Agenda Kegiatan</Label>
+                    <Label className="text-slate-300 font-semibold text-xs">Deskripsi / Agenda Kegiatan</Label>
                     <Textarea
                       placeholder="Tuliskan gambaran jalannya kegiatan, agenda pembahasan, atau instruksi kehadiran..."
                       value={formDeskripsi}
                       onChange={e => setFormDeskripsi(e.target.value)}
                       rows={3}
-                      className="bg-slate-950/60 border-slate-800 text-white text-xs resize-none"
+                      className="bg-slate-950/70 border-slate-800 text-white text-xs rounded-xl focus:border-amber-500 resize-none p-3"
                     />
                   </div>
                 </div>
 
                 {/* Modal Footer */}
-                <div className="p-4 border-t border-slate-800 flex justify-end gap-2.5 bg-slate-950/40">
+                <div className="px-6 py-4 border-t border-slate-800 flex justify-end gap-3 bg-slate-950/40">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={() => setIsModalOpen(false)}
-                    className="border-slate-800 text-slate-400 hover:text-white"
+                    className="h-10 px-4 border-slate-800 text-slate-400 hover:text-white rounded-xl"
                   >
                     Batal
                   </Button>
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                    className="h-10 px-5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-950/40"
                   >
                     {isSubmitting ? (
                       <>

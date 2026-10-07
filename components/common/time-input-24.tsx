@@ -35,66 +35,65 @@ export function TimeInput24({
   };
 
   const handleMinuteChange = (newMinute: string) => {
-    if (!newMinute) {
-      if (!hour) {
-        onChange('');
-        return;
-      }
-    }
-    const currentHour = hour || '08';
+    const currentHour = hour || '09';
     onChange(`${currentHour}:${newMinute || '00'}`);
   };
 
   return (
-    <div className={`flex items-center gap-1.5 ${className}`}>
-      {/* Jam Selector (00 - 23) */}
-      <div className="relative flex-1 min-w-[70px]">
-        <select
-          id={id ? `${id}-hour` : undefined}
-          value={hour}
-          onChange={(e) => handleHourChange(e.target.value)}
-          required={required}
-          disabled={disabled}
-          className="w-full bg-slate-950/70 border border-slate-800 text-white rounded-lg px-2.5 py-2 text-xs font-mono focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors appearance-none cursor-pointer text-center"
-        >
-          <option value="" disabled={required} className="bg-slate-900 text-slate-400">
-            Jam
-          </option>
-          {HOURS.map((h) => (
-            <option key={h} value={h} className="bg-slate-900 text-white font-mono">
-              {h} ({parseInt(h, 10) < 11 ? 'Pagi' : parseInt(h, 10) < 15 ? 'Siang' : parseInt(h, 10) < 18 ? 'Sore' : 'Malam'})
-            </option>
-          ))}
-        </select>
-      </div>
+    <div
+      className={`group flex items-center bg-slate-950/70 border border-slate-800 focus-within:border-amber-500/80 focus-within:ring-1 focus-within:ring-amber-500/30 rounded-xl px-3 h-10 w-full transition-all ${
+        disabled ? 'opacity-50 cursor-not-allowed' : ''
+      } ${className}`}
+    >
+      <Clock className="w-3.5 h-3.5 text-slate-400 group-focus-within:text-amber-400 shrink-0 mr-2 transition-colors" />
 
-      <span className="text-slate-400 font-bold text-sm">:</span>
+      {/* Jam Selector (00 - 23) */}
+      <select
+        id={id ? `${id}-hour` : undefined}
+        value={hour}
+        onChange={(e) => handleHourChange(e.target.value)}
+        required={required}
+        disabled={disabled}
+        className="bg-transparent text-white text-xs font-mono font-semibold focus:outline-none cursor-pointer text-center appearance-none px-1"
+        style={{ colorScheme: 'dark' }}
+      >
+        <option value="" disabled={required} className="bg-slate-900 text-slate-400">
+          --
+        </option>
+        {HOURS.map((h) => (
+          <option key={h} value={h} className="bg-slate-900 text-white font-mono">
+            {h}
+          </option>
+        ))}
+      </select>
+
+      <span className="text-slate-500 font-bold text-xs mx-1">:</span>
 
       {/* Menit Selector (00 - 59) */}
-      <div className="relative flex-1 min-w-[70px]">
-        <select
-          id={id ? `${id}-minute` : undefined}
-          value={minute}
-          onChange={(e) => handleMinuteChange(e.target.value)}
-          required={required && !!hour}
-          disabled={disabled}
-          className="w-full bg-slate-950/70 border border-slate-800 text-white rounded-lg px-2.5 py-2 text-xs font-mono focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors appearance-none cursor-pointer text-center"
-        >
-          <option value="" disabled={required} className="bg-slate-900 text-slate-400">
-            Menit
+      <select
+        id={id ? `${id}-minute` : undefined}
+        value={minute}
+        onChange={(e) => handleMinuteChange(e.target.value)}
+        required={required && !!hour}
+        disabled={disabled}
+        className="bg-transparent text-white text-xs font-mono font-semibold focus:outline-none cursor-pointer text-center appearance-none px-1"
+        style={{ colorScheme: 'dark' }}
+      >
+        <option value="" disabled={required} className="bg-slate-900 text-slate-400">
+          --
+        </option>
+        {MINUTES.map((m) => (
+          <option key={m} value={m} className="bg-slate-900 text-white font-mono">
+            {m}
           </option>
-          {MINUTES.map((m) => (
-            <option key={m} value={m} className="bg-slate-900 text-white font-mono">
-              {m}
-            </option>
-          ))}
-        </select>
-      </div>
+        ))}
+      </select>
 
-      {/* WIB Badge */}
-      <span className="text-[11px] font-bold text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-2 py-1.5 rounded-lg select-none whitespace-nowrap">
-        WIB
-      </span>
+      <div className="ml-auto pl-2 flex items-center">
+        <span className="text-[10px] font-bold text-amber-400/90 tracking-wider">
+          WIB
+        </span>
+      </div>
     </div>
   );
 }
