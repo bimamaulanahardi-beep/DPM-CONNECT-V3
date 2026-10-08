@@ -103,7 +103,7 @@ export default function AdminPemiraDetailPage({ params }: { params: { id: string
               }}
               className="bg-slate-950 text-xs text-white border border-slate-700 rounded-lg px-2 py-1 outline-none focus:border-amber-500"
             >
-              <option value="draft">Draft (Sembunyikan)</option>
+              <option value="draft">Draft (Belum Aktif)</option>
               <option value="aktif">Aktif (Buka Pemilihan)</option>
               <option value="selesai">Selesai (Tutup Pemilihan)</option>
             </select>

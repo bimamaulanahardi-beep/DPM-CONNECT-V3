@@ -22,8 +22,8 @@ export async function GET(request: Request, { params }: Params) {
       }
     });
 
-    if (!event || event.status === 'draft') {
-      return NextResponse.json({ error: 'Pemira not found or not active' }, { status: 404 });
+    if (!event) {
+      return NextResponse.json({ error: 'Pemira not found' }, { status: 404 });
     }
 
     const responseData = {

@@ -6,9 +6,6 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const pemiraList = await prisma.pemiraEvent.findMany({
-      where: {
-        status: { in: ['aktif', 'selesai'] }
-      },
       orderBy: { created_at: 'desc' },
       include: {
         _count: {

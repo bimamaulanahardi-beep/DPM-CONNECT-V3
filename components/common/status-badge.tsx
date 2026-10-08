@@ -25,8 +25,9 @@ const statusConfig: Record<string, { label: string; variant: any }> = {
   berjalan: { label: 'Berjalan', variant: 'process' },
   terlambat: { label: 'Terlambat', variant: 'rejected' },
 
-  // Voting
-  draft: { label: 'Draft', variant: 'outline' },
+  // Voting & Pemira
+  draft: { label: 'Belum Aktif', variant: 'pending' },
+  belum_aktif: { label: 'Belum Aktif', variant: 'pending' },
   aktif: { label: 'Aktif', variant: 'process' },
 
   // Letters (Surat)

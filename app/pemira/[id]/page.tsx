@@ -3,7 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Users, Loader2, CheckCircle2, Target, Lightbulb, Vote, User } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Users, 
+  Loader2, 
+  CheckCircle2, 
+  Target, 
+  Lightbulb, 
+  Vote, 
+  User, 
+  Clock, 
+  Lock, 
+  Calendar 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,12 +24,13 @@ import { StatusBadge } from '@/components/common/status-badge';
 import { Logo } from '@/components/common/logo';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { formatDate } from '@/lib/utils';
 import { 
   PieChart, 
   Pie, 
   Cell, 
   Tooltip, 
-  ResponsiveContainer
+  ResponsiveContainer 
 } from 'recharts';
 
 export default function PublicPemiraDetailPage({ params }: { params: { id: string } }) {
@@ -60,10 +73,6 @@ export default function PublicPemiraDetailPage({ params }: { params: { id: strin
     if (!voterData.nama || !voterData.nim || !voterData.prodi) {
       return toast({ title: 'Error', description: 'Semua field (Nama, NIM, Prodi) wajib diisi.', variant: 'destructive' });
     }
-    
-    // Optionally: Add NIM regex validation here
-    // const nimRegex = /^[0-9]+$/;
-    // if (!nimRegex.test(voterData.nim)) { ... }
 
     setIsRegistered(true);
     toast({ title: 'Akses Diberikan', description: 'Silakan pilih pasangan calon Anda.' });
@@ -106,7 +115,11 @@ export default function PublicPemiraDetailPage({ params }: { params: { id: strin
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-slate-950 flex justify-center items-center py-20"><Loader2 className="w-8 h-8 animate-spin text-amber-500" /></div>;
+    return (
+      <div className="min-h-screen bg-slate-950 flex justify-center items-center py-20">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+      </div>
+    );
   }
 
   if (!event) {
@@ -118,6 +131,9 @@ export default function PublicPemiraDetailPage({ params }: { params: { id: strin
       </div>
     );
   }
+
+  const isBelumAktif = event.status === 'draft' || event.status === 'belum_aktif';
+  const isAktif = event.status === 'aktif';
 
   // Data for Quick Count Chart
   const colors = ['#3b82f6', '#f59e0b', '#10b981', '#8b5cf6'];
@@ -151,27 +167,131 @@ export default function PublicPemiraDetailPage({ params }: { params: { id: strin
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-6xl">
+        {/* Banner Hero Event */}
         <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 sm:p-8 relative overflow-hidden mb-8">
           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
           
           <div className="flex items-center justify-between gap-3 mb-4 relative z-10">
-            <StatusBadge status={event.status === 'aktif' && hasVoted ? 'selesai' : event.status} />
-            <span className="text-xs font-mono text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
-              {event.total_voters} Suara Masuk
-            </span>
+            <StatusBadge status={isAktif && hasVoted ? 'selesai' : event.status} />
+            {isBelumAktif ? (
+              <span className="text-xs font-mono text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/30 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" /> Segera Dimulai
+              </span>
+            ) : (
+              <span className="text-xs font-mono text-slate-500 bg-slate-950 px-3 py-1 rounded-full border border-slate-800">
+                {event.total_voters} Suara Masuk
+              </span>
+            )}
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide leading-snug mb-3 relative z-10">
             {event.judul}
           </h1>
-          <p className="text-sm text-slate-400 leading-relaxed max-w-3xl relative z-10 font-sans">
+          <p className="text-sm text-slate-400 leading-relaxed max-w-3xl relative z-10 font-sans mb-4">
             {event.deskripsi}
           </p>
+
+          <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400 pt-3 border-t border-slate-800/60 relative z-10">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-amber-500" />
+              <span>Dibuka: <strong className="text-slate-200">{formatDate(event.tanggal_mulai)}</strong></span>
+            </div>
+            <span className="text-slate-700">•</span>
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-rose-500" />
+              <span>Ditutup: <strong className="text-slate-200">{formatDate(event.tanggal_selesai)}</strong></span>
+            </div>
+            {event.total_dpt > 0 && (
+              <>
+                <span className="text-slate-700">•</span>
+                <div className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  <span>DPT: <strong className="text-slate-200">{event.total_dpt} Pemilih</strong></span>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
-          {!isRegistered && event.status === 'aktif' ? (
-            // REGISTRATION FORM
+          {/* KONDISI 1: EVENT BELUM AKTIF (PREVIEW PASLON & VISI MISI) */}
+          {isBelumAktif ? (
+            <motion.div key="upcoming-preview" initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-8">
+              {/* Alert status belum aktif */}
+              <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0 border border-amber-500/40 shadow-inner">
+                    <Clock className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-base">Pemilihan Belum Dibuka</h3>
+                    <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                      Bilik suara belum dapat diakses. Pemilihan dijadwalkan buka pada tanggal <span className="text-amber-400 font-semibold">{formatDate(event.tanggal_mulai)}</span>. Anda dapat menyimak profil dan visi-misi pasangan calon di bawah ini.
+                    </p>
+                  </div>
+                </div>
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-800 text-xs text-slate-300 font-semibold shrink-0">
+                  <Users className="w-4 h-4 text-amber-400" />
+                  <span>{event.candidates?.length || 0} Pasangan Calon</span>
+                </div>
+              </div>
+
+              {/* Header List Paslon */}
+              <div className="text-center py-2 max-w-xl mx-auto">
+                <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider mb-2">
+                  Daftar Pasangan Calon
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  Kenali visi, misi, dan program kerja kandidat pemimpin mahasiswa sebelum hari pemilihan.
+                </p>
+              </div>
+
+              {/* Grid Paslon */}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {event.candidates?.map((c: any) => (
+                  <Card key={c.id} className="bg-slate-900/60 border-slate-800 overflow-hidden flex flex-col hover:border-amber-500/40 transition-colors">
+                    <div className="bg-slate-800/50 p-6 flex flex-col items-center justify-center text-center relative border-b border-slate-800/80">
+                      <div className="absolute top-4 left-4 w-9 h-9 rounded-full bg-amber-500 text-slate-950 font-black flex items-center justify-center shadow-lg text-sm">
+                        {c.nomor_urut}
+                      </div>
+                      {c.foto_url ? (
+                        <img src={c.foto_url} alt={c.nama_ketua} className="w-24 h-24 rounded-full object-cover border-4 border-slate-900 shadow-xl mb-4" />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-900 shadow-xl mb-4 flex items-center justify-center">
+                          <Users className="w-10 h-10 text-slate-500" />
+                        </div>
+                      )}
+                      <h3 className="text-lg font-black text-white uppercase tracking-tight">{c.nama_ketua}</h3>
+                      {c.nama_wakil && <p className="text-xs text-amber-400 mt-1 font-semibold">Wakil: {c.nama_wakil}</p>}
+                    </div>
+                    
+                    <CardContent className="p-5 flex-1 flex flex-col font-sans">
+                      <div className="space-y-4 mb-6 flex-1">
+                        <div>
+                          <h4 className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                            <Lightbulb className="w-3.5 h-3.5" /> Visi
+                          </h4>
+                          <p className="text-xs text-slate-300 leading-relaxed text-justify">{c.visi}</p>
+                        </div>
+                        <div>
+                          <h4 className="text-[10px] font-bold text-blue-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                            <Target className="w-3.5 h-3.5" /> Misi
+                          </h4>
+                          <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap text-justify">{c.misi}</p>
+                        </div>
+                      </div>
+
+                      <div className="w-full bg-slate-950/80 border border-slate-800/80 rounded-xl p-3 text-center flex items-center justify-center gap-2 text-xs font-semibold text-slate-500 mt-auto">
+                        <Lock className="w-4 h-4 text-slate-600" />
+                        <span>Pemilihan Belum Dibuka</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </motion.div>
+          ) : isAktif && !isRegistered ? (
+            /* KONDISI 2: EVENT AKTIF & BELUM VERIFIKASI (FORM REGISTRASI) */
             <motion.div key="registration" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-md mx-auto">
               <Card className="bg-slate-900/60 border-slate-800 shadow-xl relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 to-yellow-600" />
@@ -229,8 +349,8 @@ export default function PublicPemiraDetailPage({ params }: { params: { id: strin
                 </CardContent>
               </Card>
             </motion.div>
-          ) : event.status === 'aktif' && !hasVoted ? (
-            // VOTING BOOTH
+          ) : isAktif && !hasVoted ? (
+            /* KONDISI 3: EVENT AKTIF & SUDAH VERIFIKASI (BILIK SUARA) */
             <motion.div key="voting-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
               <div className="text-center py-4 bg-slate-900/40 rounded-xl border border-slate-800/50 mb-8 max-w-2xl mx-auto">
                 <h2 className="text-xl font-bold text-white uppercase tracking-widest mb-1">Bilik Suara Digital</h2>
@@ -285,7 +405,7 @@ export default function PublicPemiraDetailPage({ params }: { params: { id: strin
               </div>
             </motion.div>
           ) : (
-            // RESULTS SCREEN
+            /* KONDISI 4: EVENT SELESAI ATAU SUDAH MEMILIH (HASIL QUICK COUNT) */
             <motion.div key="result-screen" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 max-w-4xl mx-auto">
               {hasVoted && (
                 <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 flex items-center justify-center gap-3 text-emerald-400 font-bold text-sm">
