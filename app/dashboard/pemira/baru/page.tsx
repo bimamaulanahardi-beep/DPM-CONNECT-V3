@@ -3,7 +3,17 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Plus, Loader2, Trash2 } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Plus, 
+  Loader2, 
+  Trash2, 
+  Upload, 
+  Image as ImageIcon, 
+  X, 
+  Link2,
+  CheckCircle2
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,11 +24,15 @@ export default function BuatPemiraPage() {
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const [manualUrlIndex, setManualUrlIndex] = useState<Record<number, boolean>>({});
+
   const [formData, setFormData] = useState({
     judul: '',
     deskripsi: '',
     tanggal_mulai: '',
     tanggal_selesai: '',
+    total_dpt: '',
   });
 
   const [candidates, setCandidates] = useState([
@@ -44,6 +58,61 @@ export default function BuatPemiraPage() {
     const newCandidates = [...candidates];
     newCandidates.splice(index, 1);
     setCandidates(newCandidates);
+  };
+
+  const handlePhotoUpload = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({ 
+        title: 'Format Tidak Sesuai', 
+        description: 'Harap pilih file gambar (JPG, PNG, JPEG, WebP).', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ 
+        title: 'Ukuran Terlalu Besar', 
+        description: 'Ukuran foto maksimal adalah 10MB.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    setUploadingIndex(index);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Gagal mengunggah berkas foto');
+      }
+
+      const result = await res.json();
+      handleCandidateChange(index, 'foto_url', result.url);
+      toast({ 
+        title: 'Foto Berhasil Diunggah', 
+        description: `Foto Paslon ${index + 1} berhasil disimpan.` 
+      });
+    } catch (err: any) {
+      toast({ 
+        title: 'Gagal Unggah Foto', 
+        description: err.message || 'Terjadi kesalahan saat mengunggah foto.', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setUploadingIndex(null);
+      e.target.value = '';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,7 +221,7 @@ export default function BuatPemiraPage() {
                 type="number"
                 name="total_dpt"
                 placeholder="Contoh: 3500 (Jumlah mahasiswa berhak pilih)"
-                value={(formData as any).total_dpt || ''}
+                value={formData.total_dpt}
                 onChange={handleChange}
                 className="bg-slate-950 border-slate-800 text-white placeholder:text-slate-600"
               />
@@ -198,14 +267,109 @@ export default function BuatPemiraPage() {
                 </div>
               </div>
 
+              {/* Upload Foto Paslon */}
               <div className="mb-4">
-                <label className="text-xs font-bold text-slate-400 mb-1.5 block">URL Foto Paslon (Opsional)</label>
-                <Input
-                  placeholder="https://contoh.com/foto.jpg"
-                  value={c.foto_url}
-                  onChange={(e) => handleCandidateChange(index, 'foto_url', e.target.value)}
-                  className="bg-slate-950 border-slate-800 text-white"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-bold text-slate-400 block">
+                    Foto Paslon (Opsional)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setManualUrlIndex(prev => ({ ...prev, [index]: !prev[index] }))}
+                    className="text-[11px] text-amber-500 hover:text-amber-400 flex items-center gap-1 transition-colors"
+                  >
+                    <Link2 className="w-3 h-3" />
+                    {manualUrlIndex[index] ? 'Gunakan Unggah File' : 'Gunakan Tautan URL'}
+                  </button>
+                </div>
+
+                {manualUrlIndex[index] ? (
+                  /* Input Manual URL */
+                  <div className="space-y-1.5">
+                    <Input
+                      placeholder="https://contoh.com/foto.jpg"
+                      value={c.foto_url}
+                      onChange={(e) => handleCandidateChange(index, 'foto_url', e.target.value)}
+                      className="bg-slate-950 border-slate-800 text-white"
+                    />
+                    <p className="text-[10px] text-slate-500">Masukkan tautan langsung gambar paslon yang dapat diakses publik.</p>
+                  </div>
+                ) : c.foto_url ? (
+                  /* Preview Foto Terunggah */
+                  <div className="flex items-center justify-between p-3 bg-slate-950/60 border border-slate-800 rounded-xl">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={c.foto_url} 
+                        alt={`Foto Paslon ${index + 1}`} 
+                        className="w-16 h-16 rounded-lg object-cover border border-amber-500/40 shadow-sm bg-slate-900"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Foto Paslon Terpasang
+                        </div>
+                        <p className="text-[11px] text-slate-400 line-clamp-1 max-w-xs mt-0.5 font-mono">
+                          {c.foto_url}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 font-medium transition-colors border border-slate-700">
+                          <Upload className="w-3.5 h-3.5" /> Ganti
+                        </span>
+                        <input
+                          type="file"
+                          accept="image/png, image/jpeg, image/jpg, image/webp"
+                          className="hidden"
+                          onChange={(e) => handlePhotoUpload(index, e)}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleCandidateChange(index, 'foto_url', '')}
+                        className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 hover:text-rose-300 transition-colors"
+                        title="Hapus foto"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Area Dropzone Unggah File */
+                  <label className={`flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                    uploadingIndex === index 
+                      ? 'border-amber-500/50 bg-amber-500/5 cursor-wait' 
+                      : 'border-slate-800 hover:border-amber-500/50 bg-slate-950/40 hover:bg-slate-950/80'
+                  }`}>
+                    {uploadingIndex === index ? (
+                      <div className="flex flex-col items-center gap-2 py-2">
+                        <Loader2 className="w-7 h-7 text-amber-500 animate-spin" />
+                        <span className="text-xs font-medium text-amber-400">Sedang mengunggah foto ke penyimpanan...</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center text-center">
+                        <div className="w-10 h-10 rounded-full bg-slate-800/80 flex items-center justify-center mb-2 text-amber-500">
+                          <Upload className="w-5 h-5" />
+                        </div>
+                        <span className="text-xs font-semibold text-slate-200">
+                          Pilih / Unggah Berkas Foto Paslon
+                        </span>
+                        <span className="text-[11px] text-slate-500 mt-1">
+                          Mendukung file PNG, JPG, JPEG, WebP (Maksimal 10MB)
+                        </span>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      className="hidden"
+                      disabled={uploadingIndex === index}
+                      onChange={(e) => handlePhotoUpload(index, e)}
+                    />
+                  </label>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -233,8 +397,14 @@ export default function BuatPemiraPage() {
               
               {candidates.length > 1 && (
                 <div className="mt-4 flex justify-end border-t border-slate-800 pt-4">
-                  <Button type="button" onClick={() => removeCandidate(index)} variant="ghost" className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                    <Trash2 className="w-4 h-4 mr-2" /> Hapus Paslon Ini
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeCandidate(index)}
+                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Hapus Paslon
                   </Button>
                 </div>
               )}
@@ -242,14 +412,14 @@ export default function BuatPemiraPage() {
           ))}
         </div>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-800">
-          <Button type="button" variant="outline" className="border-slate-700 text-slate-300" onClick={() => router.push('/dashboard/pemira')}>
-            Batal
-          </Button>
-          <Button type="submit" disabled={loading} className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold">
-            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : 'Simpan Pemilu Raya'}
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={loading || uploadingIndex !== null}
+          className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-slate-950 font-bold h-12 text-base"
+        >
+          {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+          Buat Event Pemilu Raya
+        </Button>
       </form>
     </div>
   );
